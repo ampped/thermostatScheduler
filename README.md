@@ -32,9 +32,9 @@ Next you will need your client ID and client secret from developer.nest.com/clie
     $ export NEST_ID=<CLIENT ID>
     $ export NEST_SECRET=<CLIENT SECRET>
 
-And finally, use Grunt to start the server:
+And finally to start the server:
 
-    $ grunt
+    $ npm start
 
 Then open http://localhost:8080 in your browser and you will be walked through the authentication process.
 
