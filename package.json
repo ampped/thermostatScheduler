@@ -5,14 +5,14 @@
     "express": "latest",
     "express-session": "latest",
     "passport": "latest",
-    "passport-nest": "latest"
+    "passport-nest": "latest",
+    "grunt": "^0.4.5",
+    "grunt-cli": "^0.1.13",
+    "grunt-wiredep": "^2.0.0"
   },
   "scripts": {
     "start": "grunt"
   },
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-cli": "^0.1.13",
-    "grunt-wiredep": "^2.0.0"
   }
 }
