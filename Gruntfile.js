@@ -19,7 +19,7 @@ module.exports = function( grunt ) {
     Start the web server on port 8080
   */
   grunt.registerTask('server', 'Start express server', function() {
-    require('./server.js').listen(8080, function () {
+    require('./server.js').listen(process.env.PORT || 3000, function () {
       grunt.log.writeln('Web server running at http://localhost:8080.');
     }).on('close', this.async());
   });
