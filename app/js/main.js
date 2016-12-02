@@ -7,12 +7,13 @@ var app = app || {};
 	//app.main.nest = app.nest;
 	app.main.init();
 };*/
+var draw = 'boop';
 
 app.main = {
-	nest: undefined,
 	canvas: undefined,
 	ctx: undefined,
 	now: undefined,
+	targetAngle: undefined,
     mouse: {
     	x: 0,
     	y: 0
@@ -26,7 +27,7 @@ app.main = {
 		HOVER: 1,
 		EDIT: 2
 	},
-	TARGET_STATE: {
+	NODE_STATE: {
 		DEFAULT: 0,
 		HOVER: 1,
 		EDIT: 2
@@ -36,11 +37,12 @@ app.main = {
 		x: 0,
 		y: 0
 	},
-	targets: [],
-	dailySchedules: [],
+	schedules: [],
+	s: 0,
 
 	init: function(){
-		console.log('init called');
+		draw = app.draw;
+		console.log('init called ');
 
 		this.canvas = document.querySelector('canvas');
 		this.canvas.width = window.innerWidth;
@@ -49,135 +51,96 @@ app.main = {
 		this.center.x = this.canvas.width/2;
 		this.center.y = this.canvas.height/2+this.MAIN.shift;
 
+		//set up schedules
+		for(var i = 0; i <= 7; i++){
+			this.schedules.push({
+				day: i,
+				nodes: []
+			})
+		}
+
 		this.state = this.STATE.DEFAULT;
+		console.dir(forecast);
 
 		this.update();
 	},
 
 	update: function(){
 		this.now = new Date();
+		this.s = this.schedules[0];
 		this.ctx.fillStyle = "#FDFDFD";
 		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 		this.animationID = requestAnimationFrame(this.update.bind(this));
 
-		this.drawSchedule(this.ctx, this.center);
+		draw.mainSchedule(this.ctx, this.center, this.now, this.s);
         this.canvas.onmousemove = this.doMouseMove.bind(this);
         this.canvas.onclick = this.doMouseDown.bind(this);
 
         if(this.state == this.STATE.HOVER){		//draw add new button
 			var distance = new Vector(this.mouse.x-this.center.x, this.mouse.y-this.center.y);
 			var drawNew = calculateVector(distance.angle, this.MAIN.radius);
-			this.drawNodeTriangle(this.ctx, '#FCC', distance.angle);
+			this.targetAngle = distance.angle;
+			this.ctx.save();
+			this.ctx.translate(this.center.x, this.center.y);
+			draw.nodeTriangle(this.ctx, '#AAF', distance.angle);
+			this.ctx.restore();
 			this.ctx.fillStyle = "#FFFF00";
 			this.ctx.beginPath();
 			this.ctx.arc(this.center.x + drawNew.x, this.center.y - drawNew.y, 25, 0, Math.PI*2, false);
 			this.ctx.fill();
 		}
 		if(this.state == this.STATE.EDIT){
-			for(var i in this.targets){
-				if(this.targets[i].state == this.TARGET_STATE.EDIT){
-					this.ctx.save();
-					//this.rotate();
-					this.ctx.fillStyle = "#F00";
-					this.ctx.beginPath();
-					this.ctx.arc(30, 30, 25, 0, Math.PI*2, false);
-					this.ctx.fill();
+			for(var i in this.s.nodes){
+				var node = this.s.nodes[i];
+				if(node.state == this.NODE_STATE.EDIT){
+					draw.editInfo(this.ctx, this.center, this.targetAngle, node);
+					this.ctx.restore();
 				}
 			}
+			this.getWeatherAt(this.targetAngle/(Math.PI*2)*1440);
 		}
 	},
 
-	drawSchedule: function(ctx, center){
-		ctx.strokeStyle = "#AAA";
-		ctx.lineWidth = 33;
-
-		this.drawTimes(ctx, center);
-
-		//draws triangle that indicates current time
-		this.drawTriangle(ctx, '#F00', (this.now.getHours()*60+this.now.getMinutes())/1440*(2*Math.PI));
-
-		//draws circle
-		ctx.beginPath();
-		ctx.arc(center.x, center.y, this.MAIN.radius, 0, Math.PI*2, false);
-		ctx.stroke();
-
-		//write temp
-
-		//draw text
-		this.fillText(this.now.today(), center.x, center.y-90, "20pt 'Source Sans Pro Light'", '#00AFD8');
-		this.fillText(this.now.time(), center.x, center.y+90, "25pt 'Source Sans Pro'", '#999999');
-		this.fillText(thermostat.ambient_temperature_f + '°', center.x, center.y, "40pt 'Source Sans Pro'", '#999999');
-	},
-
-	drawTriangle: function(ctx, fill, r){
-		ctx.save();
-		ctx.fillStyle = fill;
-		ctx.translate(this.center.x, this.center.y);
-		ctx.rotate(r);
-		ctx.beginPath();
-		ctx.moveTo(0, -this.MAIN.radius+35);
-		ctx.lineTo(27, -this.MAIN.radius);
-		ctx.lineTo(-27, -this.MAIN.radius);
-		ctx.closePath();
-		ctx.fill();
-		ctx.restore();
-	},
-
-	drawNodeTriangle: function(ctx, fill, r){
-		ctx.save();
-		ctx.fillStyle = fill;
-		ctx.translate(this.center.x, this.center.y);
-		ctx.rotate(r);
-		ctx.beginPath();
-		ctx.moveTo(0, -this.MAIN.radius+38);
-		ctx.lineTo(22, -this.MAIN.radius+10);
-		ctx.lineTo(-22, -this.MAIN.radius+10);
-		ctx.closePath();
-		ctx.fill();
-		ctx.restore();
-	},
-
-	drawTimes: function(ctx, center){
-		ctx.save();
-		ctx.translate(center.x, center.y);
-		ctx.strokeStyle = "#CCCCCC";
-		ctx.lineWidth = 1;
-
-		var time = "";
-		for(var i = 0; i < 24; i++){
-			ctx.save();
-			ctx.translate(0, -this.MAIN.radius)
-			ctx.beginPath();
-			ctx.moveTo(0, 0);
-			ctx.lineTo(0, 30);
-			ctx.stroke();
-			if(i%3 == 0){
-				ctx.save();
-				ctx.translate(0, 60);
-				ctx.rotate(-Math.PI/12*i);
-				ctx.translate(0, 7);
-				if(i == 0)
-					time = "12 AM";
-				else if(i < 12)
-					time = i + " AM";
-				else if(i == 12)
-					time = "12 PM";
-				else
-					time = i-12 + " PM";
-				this.fillText(time, 0, 0, "15pt 'Source Sans Pro Light'", '#777');
-				ctx.restore();
+	getWeatherAt: function(time){
+		var newDate = new Date();
+		newDate.setDate(newDate.getDate()+1);
+		time /= 60;
+		time = Math.floor(time - (time%3));
+		if(time < 10)
+			time = '0' + time;
+		var year = newDate.getUTCFullYear();
+		var month = newDate.getMonth()+1;
+		var day = newDate.getDate();
+		if(month < 10)
+			month = '0'+month;
+		if(day < 10)
+			day = '0'+day;
+		var when = year + "-" + month + "-" + day + " " + time + ":00:00";
+		for(var i = 0; i < forecast.list.length; i++){
+			if(forecast.list[i].dt_txt == when){
+				return ('Outside: ' + Math.round(forecast.list[i].main.temp) + ' °F');
 			}
-			ctx.restore();
-			ctx.rotate(Math.PI/12);
 		}
-		ctx.restore();
+		return 'not found';
 	},
 
-	createTarget: function(ctx, center){
-		var targetLocation = new Vector(this.mouse.x-this.center.x, this.mouse.y-this.center.y);
-		var time = targetLocation.angle/(Math.PI*2)*1440;
-		this.targets.push(new TargetTemp(time, 60));
-		console.dir(this.targets[0]);
+	createTarget: function(){
+		var time = this.targetAngle/(Math.PI*2)*1440;
+		var newNode = new TempNode(time, 60);
+
+		if(this.s.nodes.length == 0)
+			this.s.nodes.push(newNode);
+		else{
+			for(var i = 0; i < this.s.nodes.length; i++){
+				var node = this.s.nodes[i];
+				if(node.time > time){
+					this.s.nodes.splice(i, 0, newNode);
+					return;
+				}
+			}
+			this.s.nodes.push(newNode);
+		}
+		//console.dir(this.s.nodes[this.s.nodes.length-1]);
 	},
 
 	doMouseMove: function(e){
@@ -196,31 +159,31 @@ app.main = {
 	},
 
 	doMouseDown: function(e){
+		if(this.state == this.STATE.EDIT){
+			for (var i in this.s.nodes){		//set state current selected node to default
+				if(this.s.nodes[i].state == this.NODE_STATE.EDIT){
+					this.s.nodes[i].state = this.NODE_STATE.DEFAULT;
+				}
+			}
+
+			this.state = this.STATE.DEFAULT;
+		}
 		if(this.state == this.STATE.HOVER){
 			this.state = this.STATE.EDIT;
 			this.createTarget();
 		}
-	},
-
-	fillText: function(string, x, y, css, color){
-		this.ctx.save();
-		this.ctx.textAlign = "center";
-		this.ctx.font = css;
-		this.ctx.fillStyle = color;
-		this.ctx.fillText(string, x, y);
-		this.ctx.restore();
 	}
 }
 
-var TargetTemp = function(time, temp){
+var TempNode = function(time, temp){
 	this.time = time;
 	this.temp = temp;
 	this.state = 2;
 };
 
-var DaySchedule = function(day, targets){
+var DaySchedule = function(day, nodes){
 	this.day = day;
-	this.targets = targets;
+	this.nodes = nodes;
 }
 
 function getMouse(e){      //get mouse info
@@ -230,30 +193,41 @@ function getMouse(e){      //get mouse info
 	return mouse;
 }
 
+function getAngle(time){
+	return (time/1440*(Math.PI*2));
+}
+
+function getTime(angle){
+	return (angle/(Math.PI*2)*1440);
+}
+
 //text for days and months
 var days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 var months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-Date.prototype.today = function(){	//formats date text
+Date.prototype.today = function(){	//returns date text
 	return (days[this.getDay()] + " " + months[this.getMonth()] + " " + this.getDate());
 }
 
-Date.prototype.time = function(){	//formats time text
+Date.prototype.time = function(){	//returns time text
 	var h = this.getHours();
 	var m = this.getMinutes();
-	var t = "AM";
-	if(h == 0){
-		h = 12;
+	return getTimeFormat(h*60 + m);
+}
+
+function getTimeFormat(time){
+	var hours = Math.floor(time/60);
+	var minutes = Math.floor(time%60);
+	var period = "AM";
+	if(hours == 0)
+		hours = 12;
+	if(hours > 12){
+		hours -= 12;
+		period = "PM";
 	}
-	if(h > 12){
-		h -= 12;
-		t = "PM";
-	}
-	if(h < 10)
-		h = 0 + h.toString();
-	if(m < 10)
-		m = 0 + m.toString();
-	return (h + ":" + m + " " + t);
+	if(minutes < 10)
+		minutes = 0 + minutes.toString();
+	return (hours + ":" + minutes + " " + period);
 }
 
 var Vector = function(x, y){       //vector constructor

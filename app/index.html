@@ -7,6 +7,10 @@
 			height: 100%;
 			margin: 0;
 		}
+
+		.scheduleUI{
+			position: absolute;
+		}
 	</style>
 	<script type="text/javascript" src="/js/main.js"></script>
 </head>
@@ -14,7 +18,51 @@
 	<script src="/bower_components/jquery/dist/jquery.js"></script>
 	<script src="/bower_components/jquery-cookie/jquery.cookie.js"></script>
 	<script src="/bower_components/firebase/firebase.js"></script>
+	<script src="/js/weather.js"></script>
 	<script src="/js/nest.js"></script>
+	<script src="/js/draw.js"></script>
+	
+		 
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script> 
+	<div id="editNode" class="ui-widget-content scheduleUI">
+		<img src="img/hoverNew.png">
+	</div>
+	<img src="img/hoverNew.png" id="completeEdit" class="ui-widget-content scheduleUI" width="50">
+	<img src="img/hoverNew.png" id="cancelEdit" class="ui-widget-content scheduleUI" width="50">
+	  <script>  
+	  //original script found here: https://ammarshaikh.wordpress.com/2011/12/20/drag-object-in-circular-motion-using-jquery-ui-draggable/
+
+	  $(function() {
+	    $( "#editNode" ).draggable();
+	  });
+
+	  var drag = $('#editNode');
+	  drag.draggable({
+	    start: function(e){
+	    	console.dir(e);
+	    	console.log(e.pageX + " " + e.pageY);
+	      if(!drag.data('circle'))
+	          drag.data( 'circle', {
+	              radius : 245,
+	              centerX : window.innerWidth/2,
+	              centerY : window.innerHeight/2+16
+	          });
+	    },
+	    drag: function(e,ui){
+	      var data = drag.data( 'circle' );
+	      var angle = Math.atan2( e.pageX - data.centerX, e.pageY - data.centerY );
+	      var postop = Math.ceil((data.centerY + (Math.cos( angle ) * data.radius)) - 30);
+	      var posleft = Math.ceil((data.centerX + (Math.sin( angle ) * data.radius)) - 30)
+	      ui.position.top = postop;
+	      ui.position.left = posleft;
+
+	      //my code to record node time
+	      app.main.targetAngle = Math.PI-angle;
+	      console.log(app.main.targetAngle);
+	   }
+	  });
+	  </script>
 	<canvas></canvas>
 </body>
 </html>

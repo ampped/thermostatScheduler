@@ -50,5 +50,5 @@ dataRef.on('value', function (snapshot) {
   // TAH-361, device_id does not match the device's path ID
   thermostat.device_id = structure.thermostats[0];
 
-  app.main.init(); //call my script
+  getWeatherData(structure.postal_code); //get weather data using nest's zip code
 });
