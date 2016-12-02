@@ -4,7 +4,7 @@ var weather;
 var forecast;
 
 function getWeatherData(zip){
-	var url =  'http://api.openweathermap.org/data/2.5/weather?zip=';
+	var url =  'https://api.openweathermap.org/data/2.5/weather?zip=';
 	url += zip;
 	url += '&units=imperial&APPID=769bff39fb48ef2692b3c7ea7cfe671b';
 	$.ajax({
@@ -19,7 +19,7 @@ function getWeatherData(zip){
 }
 
 function getForecastData(zip){
-	var url =  'http://api.openweathermap.org/data/2.5/forecast?zip=';
+	var url =  'https://api.openweathermap.org/data/2.5/forecast?zip=';
 	url += zip;
 	url += '&units=imperial&APPID=769bff39fb48ef2692b3c7ea7cfe671b';
 	$.ajax({
