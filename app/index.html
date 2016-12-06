@@ -1,68 +1,256 @@
+<!DOCTYPE html>
 <html>
 <head>
-	<link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600" rel="stylesheet">
 	<style type="text/css">
 		html, body{
-			width: 100%;
-			height: 100%;
 			margin: 0;
+			color: #999;
+			font-family: 'Source Sans Pro';
 		}
 
-		.scheduleUI{
+		a{
+			color: #00AFD8;
+			font-size: 14pt;
+			font-weight: 300;
+			margin: 0 10px;
+			text-decoration: none;
+		}
+
+		main{
 			position: absolute;
 		}
+
+		.degree{
+			font-size: 70%;
+			line-height: 85pt;
+			margin-left: -10px;
+			vertical-align: top;
+		}
+
+		.thermInfo{
+			position: absolute;
+			text-align: center;
+			transform: translateX(-50%) translateY(-50%);
+		}
+
+		.day{
+			color: #00AFD8;
+			font-size: 20pt;
+			font-weight: 300;
+			margin: 0 auto;
+		}
+		#currentTarget{
+			color: #FF9332;
+			font-size: 114pt;
+			font-weight: 600;
+			line-height: 100pt;
+			margin: 0 auto;
+			transform: translateX(16px);
+		}
+		.time{
+			font-size: 24pt;
+			margin: 0 auto;
+		}
+
+		#controls{
+			margin-top: 4px;
+		}
+
+		.editUI{
+			position: absolute;
+		}
+
+		.node{
+			position: absolute;
+			text-align: center;
+			width: 68px;
+			height: 68px;
+			cursor: pointer;
+			transform: translateX(-50%) translateY(-50%);
+		}
+
+		.nodeButton{
+			position: absolute;
+			left: 0;
+		}
+
+		.nodeTemp{
+			position: absolute;
+			width: 100%;
+			font-weight: 400;
+			margin: 0;
+			margin-top: 50%;
+			transform: translateY(-50%);
+		}
+
+		#tempSlider{
+			-webkit-appearance: none;
+			outline: none;
+			width: 190px;
+		}
+		#tempSlider::-webkit-slider-runnable-track{
+			width: 100%;
+			height: 7px;
+			background: linear-gradient(to right, rgb(255, 248, 183), rgb(255, 102, 0), rgb(230, 49, 23));
+			border: 0;
+			border-radius: 7px;
+		}
+		#tempSlider::-webkit-slider-thumb {
+		    box-shadow: 0px 2px 4px #999;
+		    border: 5px solid #FFF;
+		    height: 18px;
+		    width: 18px;
+		    border-radius: 10px;
+		    background: none;
+		    cursor: pointer;
+		    -webkit-appearance: none;
+		    margin-top: -5px;
+		}
+
+		.nodeOption{
+			position: absolute;
+			transform: translateX(-50%) translateY(-50%);
+			cursor: pointer;
+		}
+
 	</style>
+	<script>
+		window.onload = init;
+		var hoveredNode = {};
+
+		function init(){
+			$('.editUI').css('display','none');
+			console.log('index init called');
+
+			var tempSlider = document.querySelector('#tempSlider');
+
+			//edit temperature of a node by slider
+			tempSlider.oninput = function(){
+				var node = app.main.s.nodes[app.main.getEditI()];
+				node.temp = this.value;
+
+				document.querySelector('#editTemp').style.color = node.getColor();
+				document.querySelector('#editTemp').innerHTML = node.temp + '°';
+			};
+
+			document.querySelector('#editButton').onclick = function(){
+				
+			};
+
+			document.querySelector('#deleteButton').onclick = function(){
+
+			};
+		} 
+
+		function makeDraggable(){
+			//original script found here: https://ammarshaikh.wordpress.com/2011/12/20/drag-object-in-circular-motion-using-jquery-ui-draggable/
+			$(function() {
+			  $( "#editNode" ).draggable();
+			});
+
+			var drag = $('#editNode');
+			drag.draggable({
+			    start: function(e){
+			        if(!drag.data('circle'))
+			            drag.data( 'circle', {
+			                radius : app.main.MAIN.radius,
+			                centerX : window.innerWidth/2,
+			                centerY : window.innerHeight/2+16
+			        	});
+			    },
+			    drag: function(e,ui){
+			        var data = drag.data( 'circle' );
+			        var angle = Math.atan2( e.pageX - data.centerX, e.pageY - data.centerY );
+
+			        //my code to set node times to 15 minute intervals
+		      	    angle -= angle % getAngle(15);
+			        if(angle % getAngle(15) > getAngle(15)/2)
+			      	angle += getAngle(15);
+			        //end
+
+			        var postop = Math.ceil(data.centerY + (Math.cos( angle ) * data.radius));
+			        var posleft = Math.ceil(data.centerX + (Math.sin( angle ) * data.radius));
+			        ui.position.top = postop;
+			        ui.position.left = posleft;
+
+			        //my code to record node time
+			        var nodes = app.main.s.nodes;
+
+			        //change order of nodes accordingly
+			        var i = app.main.getEditI();
+			        nodes[i].time = getTime(Math.PI-angle);
+			        if(i == nodes.length-1 && nodes[i].time < nodes[0].time){
+			        	var editNode = nodes.splice(i, 1);
+						nodes.splice(0, 0, editNode[0]);
+					}
+			        else if(i == 0 && nodes[i].time > nodes[nodes.length-1].time){
+			        	var editNode = nodes.splice(i, 1);
+						nodes.splice(nodes.length, 0, editNode[0]);
+			        }
+			        else if(i > 0 && nodes[i].time < nodes[i-1].time){
+			        	var editNode = nodes.splice(i, 1);
+						nodes.splice(i-1, 0, editNode[0]);
+			        }
+			        else if(i < nodes.length-1 && nodes[i].time > nodes[i+1].time){
+			        	var editNode = nodes.splice(i, 1);
+						nodes.splice(i+1, 0, editNode[0]);
+			        }
+			    }
+			});
+		}
+			
+		function makeHover(){
+			$('.defaultNode').hover(function(){
+				var angle = Math.atan2( (this.style.left).replace('px','') - app.main.center.x, (this.style.top).replace('px','') - app.main.center.y );
+			    if(angle > 0){
+					var angleE = angle + 0.349;
+					var angleD = angle - 0.349;
+				}
+				else{
+					var angleE = angle - 0.349;
+					var angleD = angle + 0.349;
+				}
+		        var postop = Math.ceil((app.main.center.y + (Math.cos( angle ) * app.main.MAIN.radius)));
+		        var posleft = Math.ceil((app.main.center.x + (Math.sin( angle ) * app.main.MAIN.radius)));
+
+		        /*Math.ceil((data.centerY + (Math.cos( angle ) * data.radius)) - 31);
+			        var posleft = Math.ceil((data.centerX + (Math.sin( angle ) * data.radius)) - 34);*/
+		        var postopE = Math.ceil((postop + (Math.cos( angleE ) * 57) ));
+		        var posleftE = Math.ceil((posleft + (Math.sin( angleE ) * 57) ));
+		        var postopD = Math.ceil((postop + (Math.cos( angleD ) * 57) ));
+		        var posleftD = Math.ceil((posleft + (Math.sin( angleD ) * 57) ));
+		        document.querySelector('#editButton').style.top = postopE+'px';
+		        document.querySelector('#editButton').style.left = posleftE+'px';
+		        document.querySelector('#deleteButton').style.top = postopD+'px';
+		        document.querySelector('#deleteButton').style.left = posleftD+'px';
+			});
+		}
+	</script>
 	<script type="text/javascript" src="/js/main.js"></script>
-</head>
-<body>
 	<script src="/bower_components/jquery/dist/jquery.js"></script>
 	<script src="/bower_components/jquery-cookie/jquery.cookie.js"></script>
 	<script src="/bower_components/firebase/firebase.js"></script>
 	<script src="/js/weather.js"></script>
 	<script src="/js/nest.js"></script>
 	<script src="/js/draw.js"></script>
-	
-		 
 	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
 	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script> 
-	<div id="editNode" class="ui-widget-content scheduleUI">
-		<img src="img/hoverNew.png">
-	</div>
-	<img src="img/hoverNew.png" id="completeEdit" class="ui-widget-content scheduleUI" width="50">
-	<img src="img/hoverNew.png" id="cancelEdit" class="ui-widget-content scheduleUI" width="50">
-	  <script>  
-	  //original script found here: https://ammarshaikh.wordpress.com/2011/12/20/drag-object-in-circular-motion-using-jquery-ui-draggable/
-
-	  $(function() {
-	    $( "#editNode" ).draggable();
-	  });
-
-	  var drag = $('#editNode');
-	  drag.draggable({
-	    start: function(e){
-	    	console.dir(e);
-	    	console.log(e.pageX + " " + e.pageY);
-	      if(!drag.data('circle'))
-	          drag.data( 'circle', {
-	              radius : 245,
-	              centerX : window.innerWidth/2,
-	              centerY : window.innerHeight/2+16
-	          });
-	    },
-	    drag: function(e,ui){
-	      var data = drag.data( 'circle' );
-	      var angle = Math.atan2( e.pageX - data.centerX, e.pageY - data.centerY );
-	      var postop = Math.ceil((data.centerY + (Math.cos( angle ) * data.radius)) - 30);
-	      var posleft = Math.ceil((data.centerX + (Math.sin( angle ) * data.radius)) - 30)
-	      ui.position.top = postop;
-	      ui.position.left = posleft;
-
-	      //my code to record node time
-	      app.main.targetAngle = Math.PI-angle;
-	      console.log(app.main.targetAngle);
-	   }
-	  });
-	  </script>
+</head>
+<body>
+	<main>
+		<div class="thermInfo">
+			<p class="day"></p>
+			<h1 id="currentTarget"></h1>
+			<p class="time"></p>
+			<div id="controls"><a href="">Smartset</a><a href="">Copy</a><a href="">Templates</a></div>
+		</div>
+		<img src="img/edit.png" id="editButton" class="nodeOption">
+		<img src="img/x.png" id="deleteButton" class="nodeOption">
+		<img src="img/complete.png" id="completeEdit" class="ui-widget-content editUI">
+		<img src="img/x.png" id="cancelEdit" class="ui-widget-content editUI">
+		<input type="range" id="tempSlider" class="editUI">
+	</main>
 	<canvas></canvas>
 </body>
 </html>

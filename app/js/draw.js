@@ -25,9 +25,15 @@ app.draw = function(){
 			ctx.stroke();
 
 			//draw text
-			this.fillText(ctx, now.today(), 0, 0-90, "20pt 'Source Sans Pro Light'", '#00AFD8', 'center');
+			document.querySelector('.thermInfo').style.left = center.x+'px';
+			document.querySelector('.thermInfo').style.top = center.y+'px';
+			document.querySelector('.day').innerHTML = now.today();
+			document.querySelector('#currentTarget').innerHTML = thermostat.ambient_temperature_f + '<span class="degree">°</span>';
+			document.querySelector('.time').innerHTML = now.time();
+			/*this.fillText(ctx, now.today(), 0, 0-90, "20pt 'Source Sans Pro Light'", '#00AFD8', 'center');
 			this.fillText(ctx, now.time(), 0, 0+90, "25pt 'Source Sans Pro'", '#999999', 'center');
 			this.fillText(ctx, thermostat.ambient_temperature_f + '°', 0, 0, "40pt 'Source Sans Pro'", '#999999', 'center');
+			*/
 
 			//draw temperature nodes
 			var nodes = schedule.nodes;
@@ -36,7 +42,7 @@ app.draw = function(){
 			for(var i in nodes){
 				var angle = nodes[i].time/1440*(Math.PI*2);
 
-				ctx.strokeStyle = "#F50";
+				ctx.strokeStyle = nodes[i].getColor();
 				ctx.lineWidth = 33;
 				ctx.beginPath();
 				ctx.save();
@@ -46,8 +52,12 @@ app.draw = function(){
 					ctx.arc(0, 0, this.MAIN.radius, nodes[i].time/1440*(Math.PI*2), nodes[j].time/1440*(Math.PI*2), false);
 					ctx.stroke();
 				}
+				else if(i == nodes.length - 1){
+					ctx.arc(0, 0, this.MAIN.radius, nodes[i].time/1440*(Math.PI*2), nodes[0].time/1440*(Math.PI*2) + (Math.PI*2), false);
+					ctx.stroke();
+				}
 				ctx.restore();
-				this.nodeTriangle(ctx, '#0FF', angle);
+				this.nodeTriangle(ctx, nodes[i].getColor(), angle);
 			}
 
 			//draw node circles
@@ -57,9 +67,9 @@ app.draw = function(){
 				ctx.rotate(angle);
 				ctx.translate(0, -this.MAIN.radius);
 				ctx.rotate(-angle);
-				ctx.fillStyle = 'rgb('+ parseInt(i)*30 + ', 100, 100)';
+				ctx.fillStyle = nodes[i].getColor();
 				ctx.beginPath();
-				ctx.arc(0, 0, 25, 0, Math.PI*2, false);
+				ctx.arc(0, 0, 30, 0, Math.PI*2, false);
 				ctx.fill();
 				this.fillText(ctx, nodes[i].temp, 0, 10, "20pt 'Source Sans Pro'", '#0FF', 'center');
 				ctx.restore();
@@ -133,17 +143,17 @@ app.draw = function(){
 			//draw node
 			ctx.save();
 			ctx.translate(center.x, center.y);
-			this.nodeTriangle(ctx, '#AAF', angle);
+			this.nodeTriangle(ctx, node.getColor(), angle);
 			ctx.rotate(angle);
 			ctx.fillStyle = "#F00";
-			ctx.beginPath();
 			ctx.translate(0, -this.MAIN.radius);
+			/*ctx.beginPath();
 			ctx.arc(0, 0, 25, 0, Math.PI*2, false);
 			ctx.fill();
 			ctx.save();
 			ctx.rotate(-angle);
 			this.fillText(ctx, node.temp, 0, 10, "20pt 'Source Sans Pro'", '#0FF', 'center');
-			ctx.restore();
+			ctx.restore();*/
 
 			//draw node information
 			ctx.strokeStyle = "#AAA";

@@ -12,6 +12,7 @@ var draw = 'boop';
 app.main = {
 	canvas: undefined,
 	ctx: undefined,
+	hoverImg: undefined,
 	now: undefined,
 	targetAngle: undefined,
     mouse: {
@@ -37,6 +38,8 @@ app.main = {
 		x: 0,
 		y: 0
 	},
+	tempMin: 50,
+	tempMax: 90,
 	schedules: [],
 	s: 0,
 
@@ -44,6 +47,7 @@ app.main = {
 		draw = app.draw;
 		console.log('init called ');
 
+		//set up canvas
 		this.canvas = document.querySelector('canvas');
 		this.canvas.width = window.innerWidth;
 		this.canvas.height = window.innerHeight;
@@ -59,8 +63,20 @@ app.main = {
 			})
 		}
 
+		//set temperature range to user settings
+		if(thermostat.is_locked){
+			this.tempMin = thermostat.locked_temp_min_f;
+			this.tempMax = thermostat.locked_temp_max_f;
+
+			document.querySelector('#tempSlider').setAttribute('min', this.tempMin);
+			document.querySelector('#tempSlider').setAttribute('max', this.tempMax);
+		}
+
+		//set up image
+		this.hoverImg = new Image();
+		this.hoverImg.src = 'img/hoverNew.png';
+
 		this.state = this.STATE.DEFAULT;
-		console.dir(forecast);
 
 		this.update();
 	},
@@ -78,26 +94,21 @@ app.main = {
 
         if(this.state == this.STATE.HOVER){		//draw add new button
 			var distance = new Vector(this.mouse.x-this.center.x, this.mouse.y-this.center.y);
-			var drawNew = calculateVector(distance.angle, this.MAIN.radius);
+			var drawNew = calculateVector(Math.PI-distance.angle, this.MAIN.radius);
 			this.targetAngle = distance.angle;
 			this.ctx.save();
 			this.ctx.translate(this.center.x, this.center.y);
-			draw.nodeTriangle(this.ctx, '#AAF', distance.angle);
+			draw.nodeTriangle(this.ctx, '#CCC', distance.angle);
+			this.ctx.drawImage(this.hoverImg, drawNew.x-35, drawNew.y-35);
 			this.ctx.restore();
 			this.ctx.fillStyle = "#FFFF00";
-			this.ctx.beginPath();
-			this.ctx.arc(this.center.x + drawNew.x, this.center.y - drawNew.y, 25, 0, Math.PI*2, false);
-			this.ctx.fill();
 		}
 		if(this.state == this.STATE.EDIT){
-			for(var i in this.s.nodes){
-				var node = this.s.nodes[i];
-				if(node.state == this.NODE_STATE.EDIT){
-					draw.editInfo(this.ctx, this.center, this.targetAngle, node);
-					this.ctx.restore();
-				}
-			}
-			this.getWeatherAt(this.targetAngle/(Math.PI*2)*1440);
+			var node = this.s.nodes[this.getEditI()];
+			//node.time = getTime(this.targetAngle);
+			draw.editInfo(this.ctx, this.center, getAngle(node.time), node);
+			this.ctx.restore();
+			this.getWeatherAt(getAngle(node.time));
 		}
 	},
 
@@ -105,7 +116,8 @@ app.main = {
 		var newDate = new Date();
 		newDate.setDate(newDate.getDate()+1);
 		time /= 60;
-		time = Math.floor(time - (time%3));
+		time = Math.floor(time);
+		//time = Math.floor(time - (time%3));
 		if(time < 10)
 			time = '0' + time;
 		var year = newDate.getUTCFullYear();
@@ -115,18 +127,33 @@ app.main = {
 			month = '0'+month;
 		if(day < 10)
 			day = '0'+day;
-		var when = year + "-" + month + "-" + day + " " + time + ":00:00";
-		for(var i = 0; i < forecast.list.length; i++){
-			if(forecast.list[i].dt_txt == when){
-				return ('Outside: ' + Math.round(forecast.list[i].main.temp) + ' °F');
+		var when = year + "-" + month + "-" + day + "T" + time + ":00:00-05:00";
+		for(var i = 0; i < forecast.response[0].periods.length; i++){
+			if(forecast.response[0].periods[i].dateTimeISO == when){
+				return ('Outside: ' + Math.round(forecast.response[0].periods[i].avgTempF) + ' °F');
 			}
 		}
 		return 'not found';
 	},
 
-	createTarget: function(){
+	createNode: function(){
 		var time = this.targetAngle/(Math.PI*2)*1440;
-		var newNode = new TempNode(time, 60);
+      	
+		var newNode = new TempNode(time, Math.round((this.tempMax+this.tempMin)/2));
+
+		//create node in html
+		var domNode = document.createElement('div'); 
+		domNode.setAttribute('id', "editNode"); 
+		domNode.setAttribute('class', "node editUI");
+		domNode.innerHTML = '<img src="img/nodeButton.png" class="nodeButton"><h2 id="editTemp" class="nodeTemp"></h2>';
+		domNode.style.display = 'none';
+		document.querySelector('main').appendChild(domNode);
+
+		//update edit UI when new node is made
+		document.querySelector('#tempSlider').value = newNode.temp;
+		document.querySelector('#editTemp').innerHTML = newNode.temp + '°';
+		document.querySelector('#editTemp').style.color = newNode.getColor();
+		makeDraggable();
 
 		if(this.s.nodes.length == 0)
 			this.s.nodes.push(newNode);
@@ -140,7 +167,15 @@ app.main = {
 			}
 			this.s.nodes.push(newNode);
 		}
-		//console.dir(this.s.nodes[this.s.nodes.length-1]);
+	},
+
+	getEditI: function(){
+		for(var i = 0; i < this.s.nodes.length; i++){
+			var node = this.s.nodes[i];
+			if(node.state == this.NODE_STATE.EDIT){
+				return i;
+			}
+		}
 	},
 
 	doMouseMove: function(e){
@@ -160,17 +195,43 @@ app.main = {
 
 	doMouseDown: function(e){
 		if(this.state == this.STATE.EDIT){
-			for (var i in this.s.nodes){		//set state current selected node to default
-				if(this.s.nodes[i].state == this.NODE_STATE.EDIT){
-					this.s.nodes[i].state = this.NODE_STATE.DEFAULT;
-				}
-			}
+			$('#editNode').addClass('defaultNode');
+			$('#editNode').removeClass('editUI ui-draggable ui-draggable-handle');
+			$('#editNode').draggable('disable');
+			$('.editUI').toggle();
+			document.querySelector('#editNode').setAttribute('id', "");
+			document.querySelector('#editTemp').setAttribute('id', "");
+
+			makeHover();
+
+			//set state current selected node to default
+			this.s.nodes[this.getEditI()].state = this.NODE_STATE.DEFAULT;
 
 			this.state = this.STATE.DEFAULT;
 		}
 		if(this.state == this.STATE.HOVER){
 			this.state = this.STATE.EDIT;
-			this.createTarget();
+
+      	    this.targetAngle -= this.targetAngle % getAngle(15);
+	        if(this.targetAngle % getAngle(15) > getAngle(15)/2)
+	      		this.targetAngle += getAngle(15);
+
+			this.createNode();
+
+			//borrowed code from drag in index.html to set position of editNode
+			var postop = Math.ceil(this.center.y + (Math.cos( Math.PI - this.targetAngle ) * this.MAIN.radius));
+		    var posleft = Math.ceil(this.center.x + (Math.sin( Math.PI - this.targetAngle ) * this.MAIN.radius))
+
+		    $('#editNode').css({'top': postop, 'left': posleft});
+
+		    if(this.targetAngle < Math.PI){
+			    $('#tempSlider').css({'top': postop, 'left': posleft+100});
+			}
+			else{
+				$('#tempSlider').css({'top': postop, 'left': posleft-200});
+			}
+
+			$('.editUI').toggle();
 		}
 	}
 }
@@ -180,6 +241,29 @@ var TempNode = function(time, temp){
 	this.temp = temp;
 	this.state = 2;
 };
+
+TempNode.prototype.getColor = function(){	//gets rgb values based on temperature
+	var range = app.main.tempMax - app.main.tempMin;
+
+	//yellowest(255, 248, 183) orange(255, 102, 0) reddest(230, 49, 23)
+	var r = Math.floor(255 - (this.temp-app.main.tempMin)/(range/2)*25 + 25);
+	if(r > 255)
+		r = 255;
+
+	var g = (this.temp-app.main.tempMin)/range;
+	if(g <= 0.5)
+		g = Math.floor(248 - (this.temp-app.main.tempMin)/(range/2)*146);
+	else
+		g = Math.floor(102 - (this.temp-app.main.tempMin)/(range/2)*53 + 53);
+
+	var b = (this.temp-app.main.tempMin)/range;
+	if(b <= 0.5)
+		b = Math.floor(183 - (this.temp-app.main.tempMin)/(range/2)*183);
+	else
+		b = Math.floor((this.temp-app.main.tempMin)/(range/2)*23 - 23);
+
+	return ('rgb(' + r + ', ' + g + ', ' + b + ')');
+}
 
 var DaySchedule = function(day, nodes){
 	this.day = day;
@@ -198,7 +282,7 @@ function getAngle(time){
 }
 
 function getTime(angle){
-	return (angle/(Math.PI*2)*1440);
+	return Math.round(angle/(Math.PI*2)*1440);
 }
 
 //text for days and months
@@ -217,8 +301,10 @@ Date.prototype.time = function(){	//returns time text
 
 function getTimeFormat(time){
 	var hours = Math.floor(time/60);
-	var minutes = Math.floor(time%60);
+	var minutes = Math.round(time%60);
 	var period = "AM";
+	if(hours == 12)
+		period = "PM";
 	if(hours == 0)
 		hours = 12;
 	if(hours > 12){
