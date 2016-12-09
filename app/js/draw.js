@@ -27,7 +27,7 @@ app.draw = function(){
 			//draw text
 			document.querySelector('.thermInfo').style.left = center.x+'px';
 			document.querySelector('.thermInfo').style.top = center.y+'px';
-			document.querySelector('.day').innerHTML = now.today();
+			document.querySelector('.day').innerHTML = schedule.date.today();
 			document.querySelector('#currentTarget').innerHTML = thermostat.ambient_temperature_f + '<span class="degree">°</span>';
 			document.querySelector('.time').innerHTML = now.time();
 			/*this.fillText(ctx, now.today(), 0, 0-90, "20pt 'Source Sans Pro Light'", '#00AFD8', 'center');
@@ -72,6 +72,53 @@ app.draw = function(){
 				ctx.arc(0, 0, 30, 0, Math.PI*2, false);
 				ctx.fill();
 				this.fillText(ctx, nodes[i].temp, 0, 10, "20pt 'Source Sans Pro'", '#0FF', 'center');
+				ctx.restore();
+			}
+
+			ctx.restore();
+		},
+
+		schedule: function(ctx, center, schedule){
+			ctx.save();
+			ctx.fillStyle = "#FFF";
+			ctx.strokeStyle = "#AAA";
+			ctx.lineWidth = 27;
+			ctx.translate(schedule.xPos, center.y);
+			ctx.beginPath();
+			ctx.arc(0, 0, app.main.MAIN.radius*0.65, 0, Math.PI*2, false);
+			ctx.fill();
+			ctx.stroke();
+
+			//write corresponding day in the center of schedule
+			var date = new Date();
+			date.setDate(date.getDate()+(date.getDay() - app.main.s.day));
+			date.setDate(date.getDate()+(schedule.day - app.main.s.day));
+			var dateText = date.getDate();
+			if(dateText < 10)
+				dateText = '0' + dateText;
+			dateText = months[date.getMonth()] + ' ' + dateText;
+			this.fillText(ctx, days[schedule.day-1], 0, 0, "20pt 'Source Sans Pro'", '#999', 'center');
+			this.fillText(ctx, dateText, 0, 24, "13pt 'Source Sans Pro Light'", '#00AFD8', 'center');
+
+			//draw duration arcs
+			var nodes = schedule.nodes;
+			for(var i in nodes){
+				var angle = nodes[i].time/1440*(Math.PI*2);
+
+				ctx.strokeStyle = nodes[i].getColor();
+				ctx.lineWidth = 27;
+				ctx.beginPath();
+				ctx.save();
+				ctx.rotate(-Math.PI/2);
+				if(i < nodes.length-1){
+					var j = parseInt(i)+1;
+					ctx.arc(0, 0, this.MAIN.radius*0.65, nodes[i].time/1440*(Math.PI*2), nodes[j].time/1440*(Math.PI*2), false);
+					ctx.stroke();
+				}
+				else if(i == nodes.length - 1){
+					ctx.arc(0, 0, this.MAIN.radius*0.65, nodes[i].time/1440*(Math.PI*2), nodes[0].time/1440*(Math.PI*2) + (Math.PI*2), false);
+					ctx.stroke();
+				}
 				ctx.restore();
 			}
 

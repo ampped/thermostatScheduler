@@ -64,8 +64,8 @@
 		.node{
 			position: absolute;
 			text-align: center;
-			width: 68px;
-			height: 68px;
+			width: 137px;
+			height: 137px;
 			cursor: pointer;
 			transform: translateX(-50%) translateY(-50%);
 		}
@@ -73,6 +73,9 @@
 		.nodeButton{
 			position: absolute;
 			left: 0;
+			margin-top: 50%;
+			margin-left: 50%;
+			transform: translateX(-50%) translateY(-50%);
 		}
 
 		.nodeTemp{
@@ -110,14 +113,22 @@
 
 		.nodeOption{
 			position: absolute;
-			transform: translateX(-50%) translateY(-50%);
+			transform: translateX(-50%) translateY(-50%) scale(1, 1);
 			cursor: pointer;
+			opacity: 1;
+			z-index: 1;
+			transition: opacity 0.1s ease-in-out, transform 0.15s ease-in-out;
+		}
+
+		.nodeOptHidden{
+			transform: translateX(-50%) translateY(-50%) scale(0, 0);
+			opacity: 0;
 		}
 
 	</style>
 	<script>
 		window.onload = init;
-		var hoveredNode = {};
+		var hoveredNodeI = {};
 
 		function init(){
 			$('.editUI').css('display','none');
@@ -132,14 +143,6 @@
 
 				document.querySelector('#editTemp').style.color = node.getColor();
 				document.querySelector('#editTemp').innerHTML = node.temp + '°';
-			};
-
-			document.querySelector('#editButton').onclick = function(){
-				
-			};
-
-			document.querySelector('#deleteButton').onclick = function(){
-
 			};
 		} 
 
@@ -169,6 +172,7 @@
 			      	angle += getAngle(15);
 			        //end
 
+			        //set position of node
 			        var postop = Math.ceil(data.centerY + (Math.cos( angle ) * data.radius));
 			        var posleft = Math.ceil(data.centerX + (Math.sin( angle ) * data.radius));
 			        ui.position.top = postop;
@@ -201,7 +205,22 @@
 		}
 			
 		function makeHover(){
+			//make options in every node, this.children().addClass on hover
 			$('.defaultNode').hover(function(){
+				$(this).addClass('hovered');
+				$(this).children('.nodeOption').removeClass('nodeOptHidden');
+
+				//get corresponding node object
+				var nodes = app.main.schedules[0].nodes;
+				for(var i in nodes){
+					var elTime = Math.atan2( (this.style.left).replace('px','') - app.main.center.x, (this.style.top).replace('px','') - app.main.center.y );
+					elTime = Math.PI - elTime;
+					elTime = getTime(elTime);
+					if(elTime == nodes[i].time)
+						hoveredNodeI = i;
+				}
+
+				//get angles to set positions of buttons
 				var angle = Math.atan2( (this.style.left).replace('px','') - app.main.center.x, (this.style.top).replace('px','') - app.main.center.y );
 			    if(angle > 0){
 					var angleE = angle + 0.349;
@@ -211,19 +230,9 @@
 					var angleE = angle - 0.349;
 					var angleD = angle + 0.349;
 				}
-		        var postop = Math.ceil((app.main.center.y + (Math.cos( angle ) * app.main.MAIN.radius)));
-		        var posleft = Math.ceil((app.main.center.x + (Math.sin( angle ) * app.main.MAIN.radius)));
-
-		        /*Math.ceil((data.centerY + (Math.cos( angle ) * data.radius)) - 31);
-			        var posleft = Math.ceil((data.centerX + (Math.sin( angle ) * data.radius)) - 34);*/
-		        var postopE = Math.ceil((postop + (Math.cos( angleE ) * 57) ));
-		        var posleftE = Math.ceil((posleft + (Math.sin( angleE ) * 57) ));
-		        var postopD = Math.ceil((postop + (Math.cos( angleD ) * 57) ));
-		        var posleftD = Math.ceil((posleft + (Math.sin( angleD ) * 57) ));
-		        document.querySelector('#editButton').style.top = postopE+'px';
-		        document.querySelector('#editButton').style.left = posleftE+'px';
-		        document.querySelector('#deleteButton').style.top = postopD+'px';
-		        document.querySelector('#deleteButton').style.left = posleftD+'px';
+			}, function(){
+				$('.nodeOption').addClass('nodeOptHidden');
+				$(this).removeClass('hovered');
 			});
 		}
 	</script>
@@ -245,8 +254,8 @@
 			<p class="time"></p>
 			<div id="controls"><a href="">Smartset</a><a href="">Copy</a><a href="">Templates</a></div>
 		</div>
-		<img src="img/edit.png" id="editButton" class="nodeOption">
-		<img src="img/x.png" id="deleteButton" class="nodeOption">
+		<!--img src="img/edit.png" id="editButton" class="nodeOption nodeOptHidden">
+		<img src="img/x.png" id="deleteButton" class="nodeOption nodeOptHidden"-->
 		<img src="img/complete.png" id="completeEdit" class="ui-widget-content editUI">
 		<img src="img/x.png" id="cancelEdit" class="ui-widget-content editUI">
 		<input type="range" id="tempSlider" class="editUI">
