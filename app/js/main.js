@@ -2,11 +2,6 @@
 
 var app = app || {};
 
-/*window.onload = function(){
-	console.log('page has loaded');
-	//app.main.nest = app.nest;
-	app.main.init();
-};*/
 var draw = 'boop';
 
 app.main = {
@@ -50,7 +45,6 @@ app.main = {
 
 	init: function(){
 		draw = app.draw;
-		console.log('init called ');
 
 		//set up canvas
 		this.canvas = document.querySelector('canvas');
@@ -63,7 +57,7 @@ app.main = {
 		//set up schedules
 		this.now = new Date();
 		for(var i = 0; i <= 7; i++){
-			this.schedules.push(new DaySchedule(i));
+			this.schedules.push(new Schedule(i));
 		}
 		this.s = this.schedules[this.now.getDay()];
 		this.s.state = this.SCHEDULE_STATE.SELECTED;
@@ -87,8 +81,25 @@ app.main = {
 	},
 
 	update: function(){
+		var minuteBefore = this.now.getSeconds();
 		this.now = new Date();
-		//this.s = this.schedules[this.now.getDay()];
+		var minutes = this.now.getHours()*60 + this.now.getMinutes();
+		if(this.now.getSeconds() != minuteBefore){		//when time changes
+			for(var i in this.schedules){				//look for correct schedule
+				var day = this.schedules[i].date.getDay();
+				if(day == this.now.getDay()){
+					var nodes = this.schedules[i].nodes;
+					for(var j = 0; j < nodes.length; j++){		//look for correct node
+						if(minutes >= nodes[j].time && minutes < nodes[(j+1)%nodes.length].time){
+							//thermostat.target_temperature_f = nodes[j].temp;
+							$('#currentTarget').css('color', nodes[j].getColor());
+							thermostat.target_temperature_f = nodes[j].temp;
+						}
+					}
+				}
+			}
+		}
+
 		this.ctx.fillStyle = "#FDFDFD";
 		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 		this.animationID = requestAnimationFrame(this.update.bind(this));
@@ -115,20 +126,19 @@ app.main = {
 			this.ctx.fillStyle = "#FFFF00";
 		}
 		if(this.state == this.STATE.EDIT){
+			$('.defaultNode').off('mouseenter');
 			var node = this.s.nodes[this.getEditI()];
-			//node.time = getTime(this.targetAngle);
 			draw.editInfo(this.ctx, this.center, getAngle(node.time), node);
 			this.ctx.restore();
 			this.getWeatherAt(getAngle(node.time));
 		}
 	},
 
-	getWeatherAt: function(time){
+	getWeatherAt: function(time){	//gets temperature at a certain time
 		var newDate = new Date();
 		newDate.setDate(newDate.getDate()+1);
 		time /= 60;
 		time = Math.floor(time);
-		//time = Math.floor(time - (time%3));
 		if(time < 10)
 			time = '0' + time;
 		var year = newDate.getUTCFullYear();
@@ -145,32 +155,6 @@ app.main = {
 			}
 		}
 		return 'not found';
-	},
-
-	createNode: function(){
-		var time = this.targetAngle/(Math.PI*2)*1440;
-      	
-		var newNode = new TempNode(time, Math.round((this.tempMax+this.tempMin)/2));
-
-		//create node in html
-		newNode.createDOMNode();
-
-		document.querySelector('#tempSlider').value = this.temp;
-
-		makeDraggable();
-
-		if(this.s.nodes.length == 0)
-			this.s.nodes.push(newNode);
-		else{
-			for(var i = 0; i < this.s.nodes.length; i++){
-				var node = this.s.nodes[i];
-				if(node.time > time){
-					this.s.nodes.splice(i, 0, newNode);
-					return;
-				}
-			}
-			this.s.nodes.push(newNode);
-		}
 	},
 
 	getEditI: function(){
@@ -230,95 +214,94 @@ app.main = {
 		else if(this.state == this.STATE.HOVER){
 			this.state = this.STATE.EDIT;
 
+			//round angle to 15 minutes
       	    this.targetAngle -= this.targetAngle % getAngle(15);
 	        if(this.targetAngle % getAngle(15) > getAngle(15)/2)
 	      		this.targetAngle += getAngle(15);
 
 			this.createNode();
 
-			var postop = Math.ceil(this.center.y + (Math.cos( Math.PI - this.targetAngle ) * this.MAIN.radius));
-		    var posleft = Math.ceil(this.center.x + (Math.sin( Math.PI - this.targetAngle ) * this.MAIN.radius))
-
-		    if(this.targetAngle < Math.PI){
-			    $('#tempSlider').css({'top': postop, 'left': posleft+100});
-			}
-			else{
-				$('#tempSlider').css({'top': postop, 'left': posleft-200});
-			}
-
 			$('.editUI').toggle();
 		}
 		else if(this.state == this.STATE.EDIT){
-			$('#editNode').addClass('defaultNode');
-			$('#editNode').removeClass('editUI ui-draggable ui-draggable-handle');
-			$('#editNode').draggable('disable');
-			$('.editUI').toggle();
-			document.querySelector('#editNode').setAttribute('id', "");
-			document.querySelector('#editTemp').setAttribute('id', "");
+		}
+	},
 
-			makeHover();
+	createNode: function(){
+		var time = getTime(this.targetAngle);
+      	
+		var newNode = new TempNode(time, Math.round((this.tempMax+this.tempMin)/2));
 
-			//set state current selected node to default
-			this.s.nodes[this.getEditI()].state = this.NODE_STATE.DEFAULT;
+		//create node in html
+		newNode.createDOMNode();
 
-			this.state = this.STATE.DEFAULT;
+		document.querySelector('#tempSlider').value = this.temp;
+
+		makeDraggable();
+
+		if(this.s.nodes.length == 0)
+			this.s.nodes.push(newNode);
+		else{
+			for(var i = 0; i < this.s.nodes.length; i++){
+				var node = this.s.nodes[i];
+				if(node.time > time){
+					this.s.nodes.splice(i, 0, newNode);
+					return;
+				}
+			}
+			this.s.nodes.push(newNode);
 		}
 	}
 }
 
-var TempNode = function(time, temp){
-	this.time = time;
+var TempNode = function(time, temp){	//temperature node constructor
+	this.time = Math.round(time);
 	this.temp = temp;
-	this.state = 2;
+	this.state = 2;		//when a node is created it is in edit mode
 };
 
 TempNode.prototype.getColor = function(){	//gets rgb values based on temperature
 	var range = app.main.tempMax - app.main.tempMin;
+	var min = app.main.tempMin;
 
 	//yellowest(255, 248, 183) orange(255, 102, 0) reddest(230, 49, 23)
-	var r = Math.floor(255 - (this.temp-app.main.tempMin)/(range/2)*25 + 25);
+	var r = Math.floor(255 - (this.temp-min)/(range/2)*25 + 25);
 	if(r > 255)
 		r = 255;
 
-	var g = (this.temp-app.main.tempMin)/range;
+	var g = (this.temp-min)/range;
 	if(g <= 0.5)
-		g = Math.floor(248 - (this.temp-app.main.tempMin)/(range/2)*146);
+		g = Math.floor(248 - (this.temp-min)/(range/2)*146);
 	else
-		g = Math.floor(102 - (this.temp-app.main.tempMin)/(range/2)*53 + 53);
+		g = Math.floor(102 - (this.temp-min)/(range/2)*53 + 53);
 
-	var b = (this.temp-app.main.tempMin)/range;
+	var b = (this.temp-min)/range;
 	if(b <= 0.5)
-		b = Math.floor(183 - (this.temp-app.main.tempMin)/(range/2)*183);
+		b = Math.floor(183 - (this.temp-min)/(range/2)*183);
 	else
-		b = Math.floor((this.temp-app.main.tempMin)/(range/2)*23 - 23);
+		b = Math.floor((this.temp-min)/(range/2)*23 - 23);
 
 	return ('rgb(' + r + ', ' + g + ', ' + b + ')');
 }
 
 TempNode.prototype.createDOMNode = function(){
+	//create node in DOM
 	var domNode = document.createElement('div'); 
 
 	domNode.setAttribute('class', "defaultNode node");
 	domNode.innerHTML = '<img src="img/nodeButton.png" class="nodeButton"><h2 class="nodeTemp"></h2>';
 
-	if(this.state == 2){
+	if(this.state == 2){	//add appropriate classes/ids if the node is in edit mode
 		domNode.setAttribute('id', "editNode"); 
 		domNode.setAttribute('class', "node");
 		$(domNode).children('.nodeTemp').attr('id', 'editTemp');
 	}
-	//domNode.style.display = 'none';
+
 	document.querySelector('main').appendChild(domNode);
 
 	//update edit UI when new node is made
 	$(domNode).children('.nodeTemp').html(this.temp + '°');
 	$(domNode).children('.nodeTemp').css('color', this.getColor());
-
-	//borrowed code from drag in index.html to set position of editNode
-	var postop = Math.ceil(app.main.center.y + (Math.cos( Math.PI - getAngle(this.time) ) * app.main.MAIN.radius));
-    var posleft = Math.ceil(app.main.center.x + (Math.sin( Math.PI - getAngle(this.time) ) * app.main.MAIN.radius))
-
-    domNode.style.top = postop + 'px';
-    domNode.style.left = posleft + 'px';
 
     //create corresponding edit and delete buttons
     domNode.innerHTML += '<img src="img/edit.png" class="editButton nodeOption nodeOptHidden"><img src="img/x.png" class="deleteButton nodeOption nodeOptHidden">';
@@ -327,42 +310,41 @@ TempNode.prototype.createDOMNode = function(){
     var deleteButton = $(domNode).children('.deleteButton');
 
 	//get angles to set positions of buttons
-	var angle = getAngle(this.time);
-    if(angle < Math.PI){
-		var angleE = angle - 0.349;
-		var angleD = angle + 0.349;
-	}
-	else{
-		var angleE = angle + 0.349;
-		var angleD = angle - 0.349;
-	}
+	setPositions(getAngle(this.time));
 
-    //set position of edit button
-    var postopE = Math.ceil(domNode.offsetWidth/2 + (Math.cos( Math.PI - angleE ) * 57));
-    var posleftE = Math.ceil(domNode.offsetWidth/2 + (Math.sin( Math.PI - angleE ) * 57));
+    //set event of edit button
+	editButton.click(function(){
+		$('.hovered').attr('id', "editNode");
+		$('.hovered').removeClass('defaultNode hovered');
+		$('#editNode').off('mouseenter');
+		$('#editNode').children('.nodeTemp').attr('id', 'editTemp');
+		$('#editNode').children('.nodeOption').addClass('nodeOptHidden');
+		makeDraggable();
+		$('#editNode').draggable('enable');
 
-    editButton.css('top', postopE +'px');
-    editButton.css('left', posleftE +'px');
+        var angle = Math.PI - Math.atan2( $('#editNode').css('left').replace('px','') - app.main.center.x, $('#editNode').css('top').replace('px','') - app.main.center.y );
+        setPositions(angle);
 
-    //set position of delete button
-    var postopD = Math.ceil(domNode.offsetWidth/2 + (Math.cos( Math.PI - angleD ) * 57));
-    var posleftD = Math.ceil(domNode.offsetWidth/2 + (Math.sin( Math.PI - angleD ) * 57));
+		prevTemp = $('#editTemp').html();
+		prevTime = angle;
 
-    deleteButton.css('top', postopD+'px');
-    deleteButton.css('left', posleftD+'px');
+		app.main.state = 2;
+		var nodes = app.main.s.nodes;
+		nodes[hoveredNodeI].state = 2;
+		document.querySelector('#tempSlider').value = nodes[hoveredNodeI].temp;
+
+		$('.editUI').toggle();
+	});
 
     //set event of delete button
 	deleteButton.click(function(){
-		console.log(hoveredNodeI);
 		var nodes = app.main.s.nodes;
 		nodes.splice(hoveredNodeI, 1);
 		$('.hovered').remove();
-
-		console.dir(nodes);
 	});
 }
 
-var DaySchedule = function(day){
+var Schedule = function(day){	//schedule constructor
 	this.day = day;
 	this.nodes = [];
 	this.state = 0;
@@ -371,6 +353,7 @@ var DaySchedule = function(day){
 	this.date.setDate(this.date.getDate()+(this.day-app.main.now.getDay()));
 }
 
+
 function getMouse(e){      //get mouse info
 	var mouse = {};
 	mouse.x = e.pageX - e.target.offsetLeft;
@@ -378,13 +361,14 @@ function getMouse(e){      //get mouse info
 	return mouse;
 }
 
-function getAngle(time){
+function getAngle(time){	//converts from time in minutes to angle in radians 
 	return (time/1440*(Math.PI*2));
 }
 
-function getTime(angle){
+function getTime(angle){	//converts from angles in radians to time in minutes
 	return Math.round(angle/(Math.PI*2)*1440);
 }
+
 
 //text for days and months
 var days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -397,13 +381,13 @@ Date.prototype.today = function(){	//returns date text
 	return (days[this.getDay()-1] + " " + months[this.getMonth()] + " " + date);
 }
 
-Date.prototype.time = function(){	//returns time text
+Date.prototype.time = function(){	//returns time in minutes
 	var h = this.getHours();
 	var m = this.getMinutes();
 	return getTimeFormat(h*60 + m);
 }
 
-function getTimeFormat(time){
+function getTimeFormat(time){	//returns time in 00:00 AM/PM format
 	var hours = Math.floor(time/60);
 	var minutes = Math.round(time%60);
 	var period = "AM";
@@ -440,3 +424,19 @@ function calculateVector(angle, mag){          //calculates a vector based on an
 	v.y = Math.cos(angle)*mag;
 	return v;
 };
+
+function saveAsString(){
+	var schedules = app.main.schedules;
+	var bigString = '';
+	for(var i in schedules){
+		var day = schedules[i].day;
+		bigString += day + ':';
+		var node = schedules[i].nodes;
+		for(var j in nodes){
+			bigString += nodes[j].time + ',';
+			bigString += nodes[j].temp + ';';
+		}
+		bigString += '|';
+	}
+	return bigString;
+}

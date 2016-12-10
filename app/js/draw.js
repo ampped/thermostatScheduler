@@ -28,12 +28,8 @@ app.draw = function(){
 			document.querySelector('.thermInfo').style.left = center.x+'px';
 			document.querySelector('.thermInfo').style.top = center.y+'px';
 			document.querySelector('.day').innerHTML = schedule.date.today();
-			document.querySelector('#currentTarget').innerHTML = thermostat.ambient_temperature_f + '<span class="degree">°</span>';
+			document.querySelector('#currentTarget').innerHTML = thermostat.target_temperature_f + '<span class="degree">°</span>';
 			document.querySelector('.time').innerHTML = now.time();
-			/*this.fillText(ctx, now.today(), 0, 0-90, "20pt 'Source Sans Pro Light'", '#00AFD8', 'center');
-			this.fillText(ctx, now.time(), 0, 0+90, "25pt 'Source Sans Pro'", '#999999', 'center');
-			this.fillText(ctx, thermostat.ambient_temperature_f + '°', 0, 0, "40pt 'Source Sans Pro'", '#999999', 'center');
-			*/
 
 			//draw temperature nodes
 			var nodes = schedule.nodes;
@@ -193,44 +189,30 @@ app.draw = function(){
 			this.nodeTriangle(ctx, node.getColor(), angle);
 			ctx.rotate(angle);
 			ctx.fillStyle = "#F00";
-			ctx.translate(0, -this.MAIN.radius);
-			/*ctx.beginPath();
-			ctx.arc(0, 0, 25, 0, Math.PI*2, false);
-			ctx.fill();
-			ctx.save();
-			ctx.rotate(-angle);
-			this.fillText(ctx, node.temp, 0, 10, "20pt 'Source Sans Pro'", '#0FF', 'center');
-			ctx.restore();*/
+			ctx.translate(0, -(this.MAIN.radius+30));
 
 			//draw node information
+			var adjustY = 0;
 			ctx.strokeStyle = "#AAA";
 			ctx.lineWidth = 1;
-			ctx.translate(0, -30);
 			ctx.rotate(-angle);
 			if(angle < Math.PI){
-				ctx.translate(30, 0);
-				ctx.beginPath();
-				ctx.moveTo(0, 0);
-				ctx.lineTo(200, 0);
-				ctx.stroke();
-				ctx.arc(200, 0, 15, 0, Math.PI*2, false);
-				ctx.arc(162, 0, 15, 0, Math.PI*2, false);
-				ctx.fill();
-				this.fillText(ctx, getTimeFormat(angle/(Math.PI*2)*1440), 0, -50, "15pt 'Source Sans Pro'", '#777', 'left');
-				this.fillText(ctx, app.main.getWeatherAt(angle/(Math.PI*2)*1440), 0, -20, "15pt 'Source Sans Pro'", '#777', 'left');
+				if(angle > Math.PI/2)
+					adjustY = Math.sin(angle-(Math.PI/2))*65;
+				ctx.translate(30, adjustY);
+				this.fillText(ctx, getTimeFormat(angle/(Math.PI*2)*1440), 0, -52, "15pt 'Source Sans Pro'", '#777', 'left');
+				this.fillText(ctx, app.main.getWeatherAt(angle/(Math.PI*2)*1440), 0, -24, "15pt 'Source Sans Pro'", '#777', 'left');
+				this.fillText(ctx, app.main.tempMin+'°', 0, 10, "12pt 'Source Sans Pro Light'", '#777', 'left');
+				this.fillText(ctx, app.main.tempMax+'°', 211, 10, "12pt 'Source Sans Pro Light'", '#777', 'left');
 			}
 			else{
-				ctx.translate(-30, 0);
-				ctx.beginPath();
-				ctx.moveTo(0, 0);
-				ctx.lineTo(-200, 0);
-				ctx.stroke();
-				ctx.arc(-200, 0, 15, 0, Math.PI*2, false);
-				ctx.arc(-162, 0, 15, 0, Math.PI*2, false);
-				ctx.fill();
-				ctx.textAlign = 'right';
-				this.fillText(ctx, getTimeFormat(angle/(Math.PI*2)*1440), 0, -50, "15pt 'Source Sans Pro'", '#777', 'right');
-				this.fillText(ctx, app.main.getWeatherAt(angle/(Math.PI*2)*1440), 0, -20, "15pt 'Source Sans Pro'", '#777', 'right');
+				if(angle < Math.PI*(3/2))
+					adjustY = Math.sin((Math.PI*(3/2) - angle))*65;
+				ctx.translate(-30, adjustY);
+				this.fillText(ctx, getTimeFormat(angle/(Math.PI*2)*1440), 0, -52, "15pt 'Source Sans Pro'", '#777', 'right');
+				this.fillText(ctx, app.main.getWeatherAt(angle/(Math.PI*2)*1440), 0, -24, "15pt 'Source Sans Pro'", '#777', 'right');
+				this.fillText(ctx, app.main.tempMin+'°', -211, 10, "12pt 'Source Sans Pro Light'", '#777', 'right');
+				this.fillText(ctx, app.main.tempMax+'°', 0, 10, "12pt 'Source Sans Pro Light'", '#777', 'right');
 			}
 			ctx.restore();
 		},

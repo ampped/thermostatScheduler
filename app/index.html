@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<title>Thermostat Schedule Maker</title>
 	<link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600" rel="stylesheet">
 	<style type="text/css">
 		html, body{
@@ -59,6 +60,8 @@
 
 		.editUI{
 			position: absolute;
+			cursor: pointer;
+			z-index: 1;
 		}
 
 		.node{
@@ -90,7 +93,7 @@
 		#tempSlider{
 			-webkit-appearance: none;
 			outline: none;
-			width: 190px;
+			width: 180px;
 		}
 		#tempSlider::-webkit-slider-runnable-track{
 			width: 100%;
@@ -129,10 +132,11 @@
 	<script>
 		window.onload = init;
 		var hoveredNodeI = {};
+		var prevTemp = -1;
+		var prevTime = -1;
 
 		function init(){
 			$('.editUI').css('display','none');
-			console.log('index init called');
 
 			var tempSlider = document.querySelector('#tempSlider');
 
@@ -144,6 +148,78 @@
 				document.querySelector('#editTemp').style.color = node.getColor();
 				document.querySelector('#editTemp').innerHTML = node.temp + '°';
 			};
+
+			var complete = document.querySelector('#completeEdit');
+			var cancel = document.querySelector('#cancelEdit');
+
+			complete.onclick = function(){
+				$('#editNode').addClass('defaultNode');
+				$('#editNode').removeClass('ui-draggable ui-draggable-handle');
+				$('#editNode').draggable('disable');
+				$('.editUI').toggle();
+
+				document.querySelector('#editNode').setAttribute('id', "");
+				document.querySelector('#editTemp').setAttribute('id', "");
+
+				//set state of current selected node to default
+				app.main.s.nodes[app.main.getEditI()].state = app.main.NODE_STATE.DEFAULT;
+
+				makeHover();
+
+				app.main.state = app.main.STATE.DEFAULT;
+				prevTemp = -1;
+				prevTime = -1;
+			}
+
+			cancel.onclick = function(){
+				nodes = app.main.s.nodes;
+		        var i = app.main.getEditI();
+
+				if(prevTemp == -1){
+					$('#editNode').remove();
+					nodes.splice(i, 1);
+				}
+				else{
+					//reset temp
+					nodes[i].temp = prevTemp.replace('°', '');
+					document.querySelector('#editTemp').innerHTML = prevTemp;
+					$('#editTemp').css('color', nodes[i].getColor());
+
+					//reset time
+					nodes[i].time = getTime(prevTime);
+				    setPositions(prevTime);
+
+					$('#editNode').addClass('defaultNode');
+					$('#editNode').removeClass('ui-draggable ui-draggable-handle');
+					$('#editNode').draggable('disable');
+
+					//set state of current selected node to default
+					nodes[i].state = app.main.NODE_STATE.DEFAULT;
+
+			        //change order of nodes back accordingly
+			        removeNode = nodes.splice(i, 1);
+			        for(var j = 0; j < nodes.length; j++){
+			        	if(nodes[j].time > getTime(prevTime)){
+			        		nodes.splice(j, 0, removeNode[0]);
+			        		break;
+			        	}
+			        	else if(j == nodes.length-1){
+			        		nodes.splice(j+1, 0, removeNode[0]);
+			        		break;
+			        	}
+			        }
+
+					document.querySelector('#editNode').setAttribute('id', "");
+					document.querySelector('#editTemp').setAttribute('id', "");
+
+				}
+
+				$('.editUI').toggle();
+				makeHover();
+				app.main.state = app.main.STATE.DEFAULT;
+				prevTemp = -1;
+				prevTime = -1;
+			}
 		} 
 
 		function makeDraggable(){
@@ -158,11 +234,11 @@
 			        if(!drag.data('circle'))
 			            drag.data( 'circle', {
 			                radius : app.main.MAIN.radius,
-			                centerX : window.innerWidth/2,
-			                centerY : window.innerHeight/2+16
+			                centerX : app.main.center.x,
+			                centerY : app.main.center.y
 			        	});
 			    },
-			    drag: function(e,ui){
+			    drag: function(e,domNode){
 			        var data = drag.data( 'circle' );
 			        var angle = Math.atan2( e.pageX - data.centerX, e.pageY - data.centerY );
 
@@ -173,10 +249,10 @@
 			        //end
 
 			        //set position of node
-			        var postop = Math.ceil(data.centerY + (Math.cos( angle ) * data.radius));
-			        var posleft = Math.ceil(data.centerX + (Math.sin( angle ) * data.radius));
-			        ui.position.top = postop;
-			        ui.position.left = posleft;
+			        var postop = Math.round(data.centerY + (Math.cos( angle ) * data.radius));
+			        var posleft = Math.round(data.centerX + (Math.sin( angle ) * data.radius));
+			        domNode.position.top = postop;
+			        domNode.position.left = posleft;
 
 			        //my code to record node time
 			        var nodes = app.main.s.nodes;
@@ -200,7 +276,9 @@
 			        	var editNode = nodes.splice(i, 1);
 						nodes.splice(i+1, 0, editNode[0]);
 			        }
-			    }
+
+					setPositions(Math.PI - angle);
+				}
 			});
 		}
 			
@@ -211,7 +289,7 @@
 				$(this).children('.nodeOption').removeClass('nodeOptHidden');
 
 				//get corresponding node object
-				var nodes = app.main.schedules[0].nodes;
+				var nodes = app.main.s.nodes;
 				for(var i in nodes){
 					var elTime = Math.atan2( (this.style.left).replace('px','') - app.main.center.x, (this.style.top).replace('px','') - app.main.center.y );
 					elTime = Math.PI - elTime;
@@ -219,21 +297,69 @@
 					if(elTime == nodes[i].time)
 						hoveredNodeI = i;
 				}
-
-				//get angles to set positions of buttons
-				var angle = Math.atan2( (this.style.left).replace('px','') - app.main.center.x, (this.style.top).replace('px','') - app.main.center.y );
-			    if(angle > 0){
-					var angleE = angle + 0.349;
-					var angleD = angle - 0.349;
-				}
-				else{
-					var angleE = angle - 0.349;
-					var angleD = angle + 0.349;
-				}
 			}, function(){
 				$('.nodeOption').addClass('nodeOptHidden');
 				$(this).removeClass('hovered');
 			});
+		}
+
+		function setPositions(angle){
+			angle = Math.PI - angle;
+	        domNode = document.querySelector('#editNode');
+
+	        //set position of node
+			var postop = Math.round(app.main.center.y + (Math.cos(angle ) * app.main.MAIN.radius));
+		    var posleft = Math.round(app.main.center.x + (Math.sin(angle ) * app.main.MAIN.radius))
+
+		    domNode.style.top = postop + 'px';
+		    domNode.style.left = posleft + 'px';
+
+	        //set up variables to change position of buttons
+		    var editButton = $(domNode).children('.editButton');
+		    var deleteButton = $(domNode).children('.deleteButton');
+
+			//get angles to set positions of buttons
+		    if(angle < 0){
+				var angleE = angle - 0.349;
+				var angleD = angle + 0.349;
+			}
+			else{
+				var angleE = angle + 0.349;
+				var angleD = angle - 0.349;
+			}
+
+		    //set position of edit button
+		    var postopE = Math.round(domNode.offsetWidth/2 + (Math.cos(angleE ) * 57));
+		    var posleftE = Math.round(domNode.offsetWidth/2 + (Math.sin(angleE ) * 57));
+
+		    editButton.css('top', postopE +'px');
+		    editButton.css('left', posleftE +'px');
+
+		    //set position of delete button
+		    var postopD = Math.round(domNode.offsetWidth/2 + (Math.cos(angleD ) * 57));
+		    var posleftD = Math.round(domNode.offsetWidth/2 + (Math.sin(angleD ) * 57));
+
+		    deleteButton.css('top', postopD +'px');
+		    deleteButton.css('left', posleftD +'px');
+
+	        //move edit UI along with node
+			var adjustY = 0;
+			if(angle > -Math.PI/2 && angle < Math.PI/2)
+				adjustY = Math.cos(angle)*65;
+
+			var postopS = Math.round(app.main.center.y + (Math.cos( angle ) * (app.main.MAIN.radius+30)) + adjustY);
+		    var posleftS = Math.round(app.main.center.x + (Math.sin( angle ) * (app.main.MAIN.radius+30)))
+
+		    if(angle > 0){
+			    $('#tempSlider').css({'top': postopS, 'left': posleftS+54});
+			    $('#completeEdit').css({'top': postopS-50, 'left': posleftS+172});
+			    $('#cancelEdit').css({'top': postopS-50, 'left': posleftS+210});
+			}
+			else{
+				$('#tempSlider').css({'top': postopS, 'left': posleftS-238});
+			    $('#completeEdit').css({'top': postopS-50, 'left': posleftS-250});
+			    $('#cancelEdit').css({'top': postopS-50, 'left': posleftS-212});
+			}
 		}
 	</script>
 	<script type="text/javascript" src="/js/main.js"></script>
@@ -252,10 +378,8 @@
 			<p class="day"></p>
 			<h1 id="currentTarget"></h1>
 			<p class="time"></p>
-			<div id="controls"><a href="">Smartset</a><a href="">Copy</a><a href="">Templates</a></div>
+			<!-- for later development div id="controls"><a href="">Smartset</a><a href="">Copy</a><a href="">Templates</a></div-->
 		</div>
-		<!--img src="img/edit.png" id="editButton" class="nodeOption nodeOptHidden">
-		<img src="img/x.png" id="deleteButton" class="nodeOption nodeOptHidden"-->
 		<img src="img/complete.png" id="completeEdit" class="ui-widget-content editUI">
 		<img src="img/x.png" id="cancelEdit" class="ui-widget-content editUI">
 		<input type="range" id="tempSlider" class="editUI">
