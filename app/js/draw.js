@@ -87,13 +87,13 @@ app.draw = function(){
 
 			//write corresponding day in the center of schedule
 			var date = new Date();
-			date.setDate(date.getDate()+(date.getDay() - app.main.s.day));
+			date.setDate(date.getDate()+(app.main.s.day - date.getDay()));
 			date.setDate(date.getDate()+(schedule.day - app.main.s.day));
 			var dateText = date.getDate();
 			if(dateText < 10)
 				dateText = '0' + dateText;
 			dateText = months[date.getMonth()] + ' ' + dateText;
-			this.fillText(ctx, days[schedule.day-1], 0, 0, "20pt 'Source Sans Pro'", '#999', 'center');
+			this.fillText(ctx, days[schedule.day], 0, 0, "20pt 'Source Sans Pro'", '#999', 'center');
 			this.fillText(ctx, dateText, 0, 24, "13pt 'Source Sans Pro Light'", '#00AFD8', 'center');
 
 			//draw duration arcs

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -187,7 +188,7 @@
 
 					//reset time
 					nodes[i].time = getTime(prevTime);
-				    setPositions(prevTime);
+				    setPositions(prevTime, document.querySelector('#editNode'));
 
 					$('#editNode').addClass('defaultNode');
 					$('#editNode').removeClass('ui-draggable ui-draggable-handle');
@@ -197,17 +198,19 @@
 					nodes[i].state = app.main.NODE_STATE.DEFAULT;
 
 			        //change order of nodes back accordingly
-			        removeNode = nodes.splice(i, 1);
-			        for(var j = 0; j < nodes.length; j++){
-			        	if(nodes[j].time > getTime(prevTime)){
-			        		nodes.splice(j, 0, removeNode[0]);
-			        		break;
-			        	}
-			        	else if(j == nodes.length-1){
-			        		nodes.splice(j+1, 0, removeNode[0]);
-			        		break;
-			        	}
-			        }
+			        if(nodes.length > 1){
+			        	removeNode = nodes.splice(i, 1);
+				        for(var j = 0; j < nodes.length; j++){
+				        	if(nodes[j].time > getTime(prevTime)){
+				        		nodes.splice(j, 0, removeNode[0]);
+				        		break;
+				        	}
+				        	else if(j == nodes.length-1){
+				        		nodes.splice(j+1, 0, removeNode[0]);
+				        		break;
+				        	}
+				        }
+				    }
 
 					document.querySelector('#editNode').setAttribute('id', "");
 					document.querySelector('#editTemp').setAttribute('id', "");
@@ -277,35 +280,13 @@
 						nodes.splice(i+1, 0, editNode[0]);
 			        }
 
-					setPositions(Math.PI - angle);
+					setPositions(Math.PI - angle, document.querySelector('#editNode'));
 				}
 			});
 		}
 			
-		function makeHover(){
-			//make options in every node, this.children().addClass on hover
-			$('.defaultNode').hover(function(){
-				$(this).addClass('hovered');
-				$(this).children('.nodeOption').removeClass('nodeOptHidden');
-
-				//get corresponding node object
-				var nodes = app.main.s.nodes;
-				for(var i in nodes){
-					var elTime = Math.atan2( (this.style.left).replace('px','') - app.main.center.x, (this.style.top).replace('px','') - app.main.center.y );
-					elTime = Math.PI - elTime;
-					elTime = getTime(elTime);
-					if(elTime == nodes[i].time)
-						hoveredNodeI = i;
-				}
-			}, function(){
-				$('.nodeOption').addClass('nodeOptHidden');
-				$(this).removeClass('hovered');
-			});
-		}
-
-		function setPositions(angle){
+		function setPositions(angle, domNode){
 			angle = Math.PI - angle;
-	        domNode = document.querySelector('#editNode');
 
 	        //set position of node
 			var postop = Math.round(app.main.center.y + (Math.cos(angle ) * app.main.MAIN.radius));
@@ -360,6 +341,27 @@
 			    $('#completeEdit').css({'top': postopS-50, 'left': posleftS-250});
 			    $('#cancelEdit').css({'top': postopS-50, 'left': posleftS-212});
 			}
+		}
+
+		function makeHover(){
+			//make options in every node, this.children().addClass on hover
+			$('.defaultNode').hover(function(){
+				$(this).addClass('hovered');
+				$(this).children('.nodeOption').removeClass('nodeOptHidden');
+
+				//get corresponding node object
+				var nodes = app.main.s.nodes;
+				for(var i in nodes){
+					var elTime = Math.atan2( (this.style.left).replace('px','') - app.main.center.x, (this.style.top).replace('px','') - app.main.center.y );
+					elTime = Math.PI - elTime;
+					elTime = getTime(elTime);
+					if(elTime == nodes[i].time)
+						hoveredNodeI = i;
+				}
+			}, function(){
+				$('.nodeOption').addClass('nodeOptHidden');
+				$(this).removeClass('hovered');
+			});
 		}
 	</script>
 	<script type="text/javascript" src="/js/main.js"></script>

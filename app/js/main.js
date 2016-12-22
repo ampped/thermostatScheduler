@@ -56,7 +56,7 @@ app.main = {
 
 		//set up schedules
 		this.now = new Date();
-		for(var i = 0; i <= 7; i++){
+		for(var i = 0; i < 7; i++){
 			this.schedules.push(new Schedule(i));
 		}
 		this.s = this.schedules[this.now.getDay()];
@@ -310,7 +310,7 @@ TempNode.prototype.createDOMNode = function(){
     var deleteButton = $(domNode).children('.deleteButton');
 
 	//get angles to set positions of buttons
-	setPositions(getAngle(this.time));
+	setPositions(getAngle(this.time), domNode);
 
     //set event of edit button
 	editButton.click(function(){
@@ -323,7 +323,7 @@ TempNode.prototype.createDOMNode = function(){
 		$('#editNode').draggable('enable');
 
         var angle = Math.PI - Math.atan2( $('#editNode').css('left').replace('px','') - app.main.center.x, $('#editNode').css('top').replace('px','') - app.main.center.y );
-        setPositions(angle);
+        setPositions(angle, domNode);
 
 		prevTemp = $('#editTemp').html();
 		prevTime = angle;
@@ -371,14 +371,14 @@ function getTime(angle){	//converts from angles in radians to time in minutes
 
 
 //text for days and months
-var days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+var days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 var months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
 Date.prototype.today = function(){	//returns date text
 	var date = this.getDate();
 	if(date < 10)
 		date = '0' + date;
-	return (days[this.getDay()-1] + " " + months[this.getMonth()] + " " + date);
+	return (days[this.getDay()] + " " + months[this.getMonth()] + " " + date);
 }
 
 Date.prototype.time = function(){	//returns time in minutes
