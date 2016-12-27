@@ -11,22 +11,34 @@ app.draw = function(){
 		mainSchedule: function(ctx, center, now, schedule){
 			ctx.save();
 			ctx.translate(center.x, center.y);
-			ctx.strokeStyle = "#AAA";
-			ctx.lineWidth = 33;
 
+			//draws circle
+			ctx.fillStyle = "#FFF";
+			ctx.strokeStyle = "#AAA";
+			ctx.lineWidth = 32;
+			ctx.beginPath();
+			ctx.arc(0, 0, this.MAIN.radius, 0, Math.PI*2, false);
+			ctx.fill();
 			this.times(ctx, center);
 
 			//draws triangle that indicates current time
 			this.triangle(ctx, '#F00', (now.getHours()*60+now.getMinutes())/1440*(2*Math.PI));
 
-			//draws circle
+			ctx.save();
+			ctx.shadowBlur = 12;
+			ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+		    ctx.shadowOffsetY = 9;
+
 			ctx.beginPath();
 			ctx.arc(0, 0, this.MAIN.radius, 0, Math.PI*2, false);
 			ctx.stroke();
+			ctx.restore();
 
 			//draw text
 			document.querySelector('.thermInfo').style.left = center.x+'px';
 			document.querySelector('.thermInfo').style.top = center.y+'px';
+			document.querySelector('#leaf').style.left = center.x+'px';
+			document.querySelector('#leaf').style.top = center.y+'px';
 			document.querySelector('.day').innerHTML = schedule.date.today();
 			document.querySelector('#currentTarget').innerHTML = thermostat.target_temperature_f + '<span class="degree">°</span>';
 			document.querySelector('.time').innerHTML = now.time();
@@ -117,7 +129,6 @@ app.draw = function(){
 				}
 				ctx.restore();
 			}
-
 			ctx.restore();
 		},
 
@@ -149,7 +160,7 @@ app.draw = function(){
 
 		times: function(ctx, center){
 			ctx.save();
-			ctx.strokeStyle = "#CCCCCC";
+			ctx.strokeStyle = "#AAA";
 			ctx.lineWidth = 1;
 
 			var time = "";
@@ -173,7 +184,7 @@ app.draw = function(){
 						time = "12 PM";
 					else
 						time = i-12 + " PM";
-					this.fillText(ctx, time, 0, 0, "15pt 'Source Sans Pro Light'", '#777', 'center');
+					this.fillText(ctx, time, 0, 0, "15pt 'Source Sans Pro Light'", '#AAA', 'center');
 					ctx.restore();
 				}
 				ctx.restore();

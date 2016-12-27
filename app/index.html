@@ -21,6 +21,17 @@
 
 		main{
 			position: absolute;
+			width: 100%;
+			height: 16pt;
+		}
+
+		#device{
+			position: absolute;
+			width: 100%;
+			font-size: 20pt;
+			font-weight: 400;
+			color: #999;
+			text-align: center;
 		}
 
 		.degree{
@@ -55,6 +66,11 @@
 			margin: 0 auto;
 		}
 
+		#leaf{
+			position: absolute;
+			transform: translateX(-50%) translateY(-50%);
+		}
+
 		#controls{
 			margin-top: 4px;
 		}
@@ -70,6 +86,7 @@
 			text-align: center;
 			width: 137px;
 			height: 137px;
+			line-height: 0;
 			cursor: pointer;
 			transform: translateX(-50%) translateY(-50%);
 		}
@@ -115,6 +132,31 @@
 		    margin-top: -5px;
 		}
 
+		#presets{
+			width: 238px;
+			line-height: 0;
+		}
+
+		#addPreset{
+			position: absolute;
+		}
+
+		.preset{
+			display: inline-block;
+			width: 29px;
+			height: 29px;
+			position: static;
+			text-align: center;
+			color: #FFF;
+			font-size: 11pt;
+			font-weight: 300;
+			letter-spacing: 1px;
+			border-radius: 14.5px;
+			margin: 0 13px 8px 0;
+			line-height: 29px;
+			cursor: pointer;
+		}
+
 		.nodeOption{
 			position: absolute;
 			transform: translateX(-50%) translateY(-50%) scale(1, 1);
@@ -146,7 +188,7 @@
 				var node = app.main.s.nodes[app.main.getEditI()];
 				node.temp = this.value;
 
-				document.querySelector('#editTemp').style.color = node.getColor();
+				$('#editTemp').css({'color': node.getColor(), 'font-size': '1.5em', 'font-weight': 400});
 				document.querySelector('#editTemp').innerHTML = node.temp + '°';
 			};
 
@@ -154,6 +196,9 @@
 			var cancel = document.querySelector('#cancelEdit');
 
 			complete.onclick = function(){
+				$('.thermInfo').fadeIn(200);
+				$('#leaf').fadeOut(200);
+
 				$('#editNode').addClass('defaultNode');
 				$('#editNode').removeClass('ui-draggable ui-draggable-handle');
 				$('#editNode').draggable('disable');
@@ -173,6 +218,9 @@
 			}
 
 			cancel.onclick = function(){
+				$('.thermInfo').fadeIn(200);
+				$('#leaf').fadeOut(200);
+
 				nodes = app.main.s.nodes;
 		        var i = app.main.getEditI();
 
@@ -185,6 +233,11 @@
 					nodes[i].temp = prevTemp.replace('°', '');
 					document.querySelector('#editTemp').innerHTML = prevTemp;
 					$('#editTemp').css('color', nodes[i].getColor());
+
+					if(prevTemp == 'OFF'){
+						document.querySelector('#editTemp').innerHTML = nodes[i].temp;
+						$('#editTemp').css({'color': '#999', 'font-size': '16pt', 'font-weight': 300});
+					}
 
 					//reset time
 					nodes[i].time = getTime(prevTime);
@@ -222,6 +275,58 @@
 				app.main.state = app.main.STATE.DEFAULT;
 				prevTemp = -1;
 				prevTime = -1;
+			}
+
+			//code for presets
+			var add = document.querySelector('#addPreset');
+			var off = document.querySelector('#setOff');
+
+			add.onclick = function(){
+				nodes = app.main.s.nodes;
+		        var i = app.main.getEditI();
+
+		        //check if preset already exists
+		        var presets = document.querySelectorAll('.preset');
+		        for(var j = 0; j < presets.length; j++){
+		        	if(presets[j].innerHTML == nodes[i].temp)
+		        		return;
+		        }
+
+				var newPreset = document.createElement('div');
+				newPreset.innerHTML = nodes[i].temp;
+				newPreset.setAttribute('class', 'preset');
+				newPreset.style.backgroundColor = nodes[i].getColor();
+
+
+				newPreset.onclick = function(){
+					nodes = app.main.s.nodes;
+			        var i = app.main.getEditI();
+					nodes[i].temp = newPreset.innerHTML;
+					document.querySelector('#editTemp').innerHTML = nodes[i].temp + '°';
+					document.querySelector('#editTemp').style.color = nodes[i].getColor();
+					document.querySelector('#tempSlider').value = nodes[i].temp;
+				}
+
+				if(presets.length == 1)
+					presets[0].after(newPreset);
+				else{
+					for(var j = 1; j < presets.length; j++){
+						if(presets[j].innerHTML > nodes[i].temp){
+							$(presets[j]).before(newPreset);
+							return;
+						}
+					}
+					$('#addPreset').before(newPreset);
+				}
+			}
+
+			off.onclick = function(){
+				nodes = app.main.s.nodes;
+		        var i = app.main.getEditI();
+
+		        nodes[i].temp = 'OFF';
+				document.querySelector('#editTemp').innerHTML = 'OFF';
+				$('#editTemp').css({'color': '#999', 'font-size': '16pt', 'font-weight': 300});
 			}
 		} 
 
@@ -333,11 +438,13 @@
 
 		    if(angle > 0){
 			    $('#tempSlider').css({'top': postopS, 'left': posleftS+54});
+			    $('#presets').css({'top': postopS+23, 'left': posleftS+29});
 			    $('#completeEdit').css({'top': postopS-50, 'left': posleftS+172});
 			    $('#cancelEdit').css({'top': postopS-50, 'left': posleftS+210});
 			}
 			else{
 				$('#tempSlider').css({'top': postopS, 'left': posleftS-238});
+			    $('#presets').css({'top': postopS+23, 'left': posleftS-263});
 			    $('#completeEdit').css({'top': postopS-50, 'left': posleftS-250});
 			    $('#cancelEdit').css({'top': postopS-50, 'left': posleftS-212});
 			}
@@ -376,15 +483,18 @@
 </head>
 <body>
 	<main>
+		<h1 id="device"></h1>
 		<div class="thermInfo">
 			<p class="day"></p>
 			<h1 id="currentTarget"></h1>
 			<p class="time"></p>
-			<!-- for later development div id="controls"><a href="">Smartset</a><a href="">Copy</a><a href="">Templates</a></div-->
+			<!--for later development div id="controls"><a href="">Smartset</a><a href="">Copy</a><a href="">Templates</a></div-->
 		</div>
+		<img src="img/leaf.png" id="leaf" style="display:none">
 		<img src="img/complete.png" id="completeEdit" class="ui-widget-content editUI">
 		<img src="img/x.png" id="cancelEdit" class="ui-widget-content editUI">
 		<input type="range" id="tempSlider" class="editUI">
+		<div id="presets" class="editUI"><div id="setOff" class="preset" style="background-color:#CECECE; font-size: 10pt; letter-spacing: 1px">OFF</div><img src="img/addPreset.png" id="addPreset"></div>
 	</main>
 	<canvas></canvas>
 </body>

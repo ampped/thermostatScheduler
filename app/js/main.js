@@ -46,6 +46,9 @@ app.main = {
 	init: function(){
 		draw = app.draw;
 
+		//set up device name
+		document.querySelector('#device').innerHTML = thermostat.label;
+
 		//set up canvas
 		this.canvas = document.querySelector('canvas');
 		this.canvas.width = window.innerWidth;
@@ -100,8 +103,13 @@ app.main = {
 			}
 		}
 
-		this.ctx.fillStyle = "#FDFDFD";
+		//create gradient background
+		var grd = this.ctx.createLinearGradient(0, this.canvas.height*0.4, 0, this.canvas.height);
+		grd.addColorStop(0, "#FFF");
+		grd.addColorStop(1, "#E0E0E0");
+		this.ctx.fillStyle = grd;
 		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
 		this.animationID = requestAnimationFrame(this.update.bind(this));
 
 		draw.mainSchedule(this.ctx, this.center, this.now, this.s);
@@ -126,6 +134,14 @@ app.main = {
 			this.ctx.fillStyle = "#FFFF00";
 		}
 		if(this.state == this.STATE.EDIT){
+			//lighten other schedules
+			this.ctx.save();
+			this.ctx.fillStyle = '#FFF';
+			this.ctx.globalAlpha = 0.7;
+			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+			this.ctx.restore();
+
+			draw.mainSchedule(this.ctx, this.center, this.now, this.s);
 			$('.defaultNode').off('mouseenter');
 			var node = this.s.nodes[this.getEditI()];
 			draw.editInfo(this.ctx, this.center, getAngle(node.time), node);
@@ -214,6 +230,9 @@ app.main = {
 		else if(this.state == this.STATE.HOVER){
 			this.state = this.STATE.EDIT;
 
+			$('.thermInfo').fadeOut(200);
+			$('#leaf').fadeIn(200);
+
 			//round angle to 15 minutes
       	    this.targetAngle -= this.targetAngle % getAngle(15);
 	        if(this.targetAngle % getAngle(15) > getAngle(15)/2)
@@ -264,6 +283,9 @@ TempNode.prototype.getColor = function(){	//gets rgb values based on temperature
 	var range = app.main.tempMax - app.main.tempMin;
 	var min = app.main.tempMin;
 
+	if(this.temp == 'OFF')
+		return ('#F8F8F8');
+
 	//yellowest(255, 248, 183) orange(255, 102, 0) reddest(230, 49, 23)
 	var r = Math.floor(255 - (this.temp-min)/(range/2)*25 + 25);
 	if(r > 255)
@@ -300,8 +322,14 @@ TempNode.prototype.createDOMNode = function(){
 	document.querySelector('main').appendChild(domNode);
 
 	//update edit UI when new node is made
-	$(domNode).children('.nodeTemp').html(this.temp + '°');
-	$(domNode).children('.nodeTemp').css('color', this.getColor());
+	if(this.temp == 'OFF'){
+		$(domNode).children('.nodeTemp').html(this.temp);
+		$(domNode).children('.nodeTemp').css({'color': '#999', 'font-size': '16pt', 'font-weight': 300});
+	}
+	else{
+		$(domNode).children('.nodeTemp').html(this.temp + '°');
+		$(domNode).children('.nodeTemp').css('color', this.getColor());
+	}
 
     //create corresponding edit and delete buttons
     domNode.innerHTML += '<img src="img/edit.png" class="editButton nodeOption nodeOptHidden"><img src="img/x.png" class="deleteButton nodeOption nodeOptHidden">';
@@ -314,6 +342,9 @@ TempNode.prototype.createDOMNode = function(){
 
     //set event of edit button
 	editButton.click(function(){
+		$('.thermInfo').fadeOut(200);
+		$('#leaf').fadeIn(200);
+
 		$('.hovered').attr('id', "editNode");
 		$('.hovered').removeClass('defaultNode hovered');
 		$('#editNode').off('mouseenter');
