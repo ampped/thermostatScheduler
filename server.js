@@ -26,17 +26,22 @@ var express = require('express'),
 /**
   Setup Passport to use the NestStrategy,
   simply pass in the clientID and clientSecret.
-
-  Here we are pulling those in from ENV variables.
 */
-passport.use(new NestStrategy({
-    clientID: '57aa0756-6d9d-45b2-93aa-9639f40a4748',
-    clientSecret: 'r100FZlhP2eDUx8gocGVmOgti'
-    
-    //clientID: process.env.NEST_ID,
-    //clientSecret: process.env.NEST_SECRET
-  }
-));
+if(process.env.PORT == 3000){
+  passport.use(new NestStrategy({
+      clientID: '2a64fe12-e9aa-4f45-b4eb-83d52b12f1b1',
+      clientSecret: 'QRHrHeoYlT08spxR39T6ecfYC'
+    }
+  ));
+}
+
+else{
+  passport.use(new NestStrategy({
+      clientID: '57aa0756-6d9d-45b2-93aa-9639f40a4748',
+      clientSecret: 'r100FZlhP2eDUx8gocGVmOgti'
+    }
+  ));
+}
 
 /**
   No user data is available in the Nest OAuth
