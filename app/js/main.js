@@ -46,17 +46,20 @@ app.main = {
 	init: function(){
 		draw = app.draw;
 
+		//set up device name
+		document.querySelector('#device').innerHTML = thermostat.label;
+
 		//set up canvas
 		this.canvas = document.querySelector('canvas');
-		this.canvas.width = window.innerWidth;
-		this.canvas.height = window.innerHeight;
+		this.canvas.width = window.innerWidth-5;
+		this.canvas.height = window.innerHeight-5;
 		this.ctx = this.canvas.getContext('2d');
 		this.center.x = this.canvas.width/2;
 		this.center.y = this.canvas.height/2+this.MAIN.shift;
 
 		//set up schedules
 		this.now = new Date();
-		for(var i = 0; i <= 7; i++){
+		for(var i = 0; i < 7; i++){
 			this.schedules.push(new Schedule(i));
 		}
 		this.s = this.schedules[this.now.getDay()];
@@ -100,8 +103,13 @@ app.main = {
 			}
 		}
 
-		this.ctx.fillStyle = "#FDFDFD";
+		//create gradient background
+		var grd = this.ctx.createLinearGradient(0, this.canvas.height*0.4, 0, this.canvas.height);
+		grd.addColorStop(0, "#FFF");
+		grd.addColorStop(1, "#E0E0E0");
+		this.ctx.fillStyle = grd;
 		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
 		this.animationID = requestAnimationFrame(this.update.bind(this));
 
 		draw.mainSchedule(this.ctx, this.center, this.now, this.s);
@@ -126,6 +134,14 @@ app.main = {
 			this.ctx.fillStyle = "#FFFF00";
 		}
 		if(this.state == this.STATE.EDIT){
+			//lighten other schedules
+			this.ctx.save();
+			this.ctx.fillStyle = '#FFF';
+			this.ctx.globalAlpha = 0.7;
+			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+			this.ctx.restore();
+
+			draw.mainSchedule(this.ctx, this.center, this.now, this.s);
 			$('.defaultNode').off('mouseenter');
 			var node = this.s.nodes[this.getEditI()];
 			draw.editInfo(this.ctx, this.center, getAngle(node.time), node);
@@ -148,7 +164,7 @@ app.main = {
 			month = '0'+month;
 		if(day < 10)
 			day = '0'+day;
-		var when = year + "-" + month + "-" + day + "T" + time + ":00:00-05:00";
+		var when = year + "-" + month + "-" + day + "T" + time + ":00:00-04:00";
 		for(var i = 0; i < forecast.response[0].periods.length; i++){
 			if(forecast.response[0].periods[i].dateTimeISO == when){
 				return ('Outside: ' + Math.round(forecast.response[0].periods[i].avgTempF) + ' °F');
@@ -214,6 +230,9 @@ app.main = {
 		else if(this.state == this.STATE.HOVER){
 			this.state = this.STATE.EDIT;
 
+			$('.thermInfo').fadeOut(200);
+			$('#leaf').fadeIn(200);
+
 			//round angle to 15 minutes
       	    this.targetAngle -= this.targetAngle % getAngle(15);
 	        if(this.targetAngle % getAngle(15) > getAngle(15)/2)
@@ -264,6 +283,9 @@ TempNode.prototype.getColor = function(){	//gets rgb values based on temperature
 	var range = app.main.tempMax - app.main.tempMin;
 	var min = app.main.tempMin;
 
+	if(this.temp == 'OFF')
+		return ('#F8F8F8');
+
 	//yellowest(255, 248, 183) orange(255, 102, 0) reddest(230, 49, 23)
 	var r = Math.floor(255 - (this.temp-min)/(range/2)*25 + 25);
 	if(r > 255)
@@ -271,13 +293,13 @@ TempNode.prototype.getColor = function(){	//gets rgb values based on temperature
 
 	var g = (this.temp-min)/range;
 	if(g <= 0.5)
-		g = Math.floor(248 - (this.temp-min)/(range/2)*146);
+		g = Math.floor(218 - (this.temp-min)/(range/2)*146);
 	else
 		g = Math.floor(102 - (this.temp-min)/(range/2)*53 + 53);
 
 	var b = (this.temp-min)/range;
 	if(b <= 0.5)
-		b = Math.floor(183 - (this.temp-min)/(range/2)*183);
+		b = Math.floor(143 - (this.temp-min)/(range/2)*183);
 	else
 		b = Math.floor((this.temp-min)/(range/2)*23 - 23);
 
@@ -300,8 +322,14 @@ TempNode.prototype.createDOMNode = function(){
 	document.querySelector('main').appendChild(domNode);
 
 	//update edit UI when new node is made
-	$(domNode).children('.nodeTemp').html(this.temp + '°');
-	$(domNode).children('.nodeTemp').css('color', this.getColor());
+	if(this.temp == 'OFF'){
+		$(domNode).children('.nodeTemp').html(this.temp);
+		$(domNode).children('.nodeTemp').css({'color': '#999', 'font-size': '16pt', 'font-weight': 300});
+	}
+	else{
+		$(domNode).children('.nodeTemp').html(this.temp + '°');
+		$(domNode).children('.nodeTemp').css('color', this.getColor());
+	}
 
     //create corresponding edit and delete buttons
     domNode.innerHTML += '<img src="img/edit.png" class="editButton nodeOption nodeOptHidden"><img src="img/x.png" class="deleteButton nodeOption nodeOptHidden">';
@@ -310,10 +338,13 @@ TempNode.prototype.createDOMNode = function(){
     var deleteButton = $(domNode).children('.deleteButton');
 
 	//get angles to set positions of buttons
-	setPositions(getAngle(this.time));
+	setPositions(getAngle(this.time), domNode);
 
     //set event of edit button
 	editButton.click(function(){
+		$('.thermInfo').fadeOut(200);
+		$('#leaf').fadeIn(200);
+
 		$('.hovered').attr('id', "editNode");
 		$('.hovered').removeClass('defaultNode hovered');
 		$('#editNode').off('mouseenter');
@@ -323,7 +354,7 @@ TempNode.prototype.createDOMNode = function(){
 		$('#editNode').draggable('enable');
 
         var angle = Math.PI - Math.atan2( $('#editNode').css('left').replace('px','') - app.main.center.x, $('#editNode').css('top').replace('px','') - app.main.center.y );
-        setPositions(angle);
+        setPositions(angle, domNode);
 
 		prevTemp = $('#editTemp').html();
 		prevTime = angle;
@@ -371,14 +402,14 @@ function getTime(angle){	//converts from angles in radians to time in minutes
 
 
 //text for days and months
-var days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+var days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 var months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
 Date.prototype.today = function(){	//returns date text
 	var date = this.getDate();
 	if(date < 10)
 		date = '0' + date;
-	return (days[this.getDay()-1] + " " + months[this.getMonth()] + " " + date);
+	return (days[this.getDay()] + " " + months[this.getMonth()] + " " + date);
 }
 
 Date.prototype.time = function(){	//returns time in minutes

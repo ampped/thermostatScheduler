@@ -12,8 +12,8 @@ function getWeatherData(zip){
 	  url: url,
 	  data: null,
 	  success: function(obj){
-	  	weather = obj;
-	  	console.dir(weather);
+	  	forecast = obj;
+	  	console.dir(forecast);
 		getForecastData(zip);
 	  }
 	});
