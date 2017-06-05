@@ -16,6 +16,9 @@ function getWeatherData(zip){
 	  	console.dir(forecast);
 		getForecastData(zip);
 	  }
+	  error: function(){
+	  	forecast = null
+	  }
 	});
 }
 
@@ -30,6 +33,9 @@ function getForecastData(zip){
 	  success: function(obj){
 	  	forecast = obj;
 		app.main.init(); //call my script
+	  }
+	  error: function(){
+	  	forecast = null
 	  }
 	});
 }
