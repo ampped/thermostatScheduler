@@ -17,7 +17,9 @@ function getWeatherData(zip){
 		getForecastData(zip);
 	  },
 	  error: function(){
-	  	forecast = null
+	  	forecast = null;
+	  	console.log('could not get weather data');
+	  	app.main.init();
 	  }
 	});
 }
@@ -35,7 +37,9 @@ function getForecastData(zip){
 		app.main.init(); //call my script
 	  },
 	  error: function(){
-	  	forecast = null
+	  	forecast = null;
+	  	console.log('could not get weather data');
+	  	app.main.init();
 	  }
 	});
 }
