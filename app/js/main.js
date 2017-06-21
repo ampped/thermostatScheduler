@@ -152,7 +152,6 @@ app.main = {
 
 	getWeatherAt: function(time){	//gets temperature at a certain time
 		var newDate = this.s.date;
-		console.log(newDate);
 		time /= 60;
 		time = Math.floor(time);
 		var year = newDate.getUTCFullYear();

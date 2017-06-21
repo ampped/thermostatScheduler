@@ -11,7 +11,6 @@ function getWeatherData(zip){
 	  data: null,
 	  success: function(obj){
 	  	weather = obj.forecast.forecastday;
-	  	console.dir(weather);
 	  	app.main.init();
 	  },
 	  error: function(){
