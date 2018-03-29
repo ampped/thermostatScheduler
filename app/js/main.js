@@ -151,20 +151,30 @@ app.main = {
 	},
 
 	getWeatherAt: function(time){	//gets temperature at a certain time
-		var newDate = this.s.date;
+		var newDate = new Date();
+		newDate.setMonth(this.s.date.getMonth());
+		newDate.setDate(this.s.date.getDate());
+		var currentTime = new Date();
 		time /= 60;
 		time = Math.floor(time);
 		var year = newDate.getUTCFullYear();
 		var month = newDate.getMonth()+1;
 		var day = newDate.getDate();
+		if(newDate < currentTime){
+			newDate.setDate(newDate.getDate() + 7)
+		}
 		if(month < 10)
 			month = '0'+month;
 		if(day < 10)
 			day = '0'+day;
 		var when = year + "-" + month + "-" + day;
 		for(var i = 0; i < weather.length; i++){
-			if(weather[i].date == when){
-				return ('Outside: ' + Math.round(weather[i].hour[time].temp_f) + ' °F');
+			if(weather[i].validTime.includes(when+"T"+time)){
+				if(weather[i])
+					return ('Outside: ' + Math.round(weather[i].tempF) + ' °F');
+				else{
+					break;
+				}
 			}
 		}
 		return 'not found';
